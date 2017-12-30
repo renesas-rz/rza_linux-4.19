@@ -133,12 +133,15 @@ struct r8a66597_platdata {
 #define DEVADD8		0xE0
 #define DEVADD9		0xE2
 #define DEVADDA		0xE4
+#define SUSPMODE0	0x102	/* RZ/A Only */
 
 /* System Configuration Control Register */
+#ifndef RZA_USB
 #define	XTAL		0xC000	/* b15-14: Crystal selection */
 #define	  XTAL48	 0x8000	  /* 48MHz */
 #define	  XTAL24	 0x4000	  /* 24MHz */
 #define	  XTAL12	 0x0000	  /* 12MHz */
+#endif
 #define	XCKE		0x2000	/* b13: External clock enable */
 #define	PLLC		0x0800	/* b11: PLL control */
 #define	SCKE		0x0400	/* b10: USB clock enable */
@@ -148,6 +151,13 @@ struct r8a66597_platdata {
 #define	DCFM		0x0040	/* b6: Controller function select  */
 #define	DRPD		0x0020	/* b5: D+/- pull down control */
 #define	DPRPU		0x0010	/* b4: D+ pull up control */
+#ifdef RZA_USB
+#define	XTAL		0x0004	/* b2: Crystal selection */
+#define	  XTAL12	 0x0004	  /* 12MHz */
+#define	  XTAL24	 0x0000	  /* DUMMY MACRO */
+#define	  XTAL48	 0x0000	  /* 48MHz */
+#define	UPLLE		0x0002	/* b1: internal PLL control */
+#endif
 #define	USBE		0x0001	/* b0: USB module operation enable */
 
 /* System Configuration Status Register */
@@ -477,6 +487,9 @@ struct r8a66597_platdata {
 #define CH0ERRC		0x0100 /* b8: Ch0 SHwy Res Err Detect Int Stat Clear */
 #define CH1ENDC		0x0002 /* b2: Ch1 DMA Transfer End Int Stat Clear */
 #define CH0ENDC		0x0001 /* b1: Ch0 DMA Transfer End Int Stat Clear */
+
+/* Suspend Mode Register */
+#define SUSPM		0x4000 /* b14: Suspend */
 
 #endif /* __LINUX_USB_R8A66597_H */
 

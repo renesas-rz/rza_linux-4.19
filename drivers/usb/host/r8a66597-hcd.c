@@ -26,6 +26,11 @@
 #include <linux/irq.h>
 #include <linux/slab.h>
 #include <asm/cacheflush.h>
+#include <linux/of.h>
+
+#if defined(CONFIG_ARCH_R7S72100)
+#define RZA_USB
+#endif
 
 #include "r8a66597.h"
 
@@ -83,14 +88,23 @@ static int r8a66597_clock_enable(struct r8a66597 *r8a66597)
 	if (r8a66597->pdata->on_chip) {
 		clk_prepare_enable(r8a66597->clk);
 		do {
+#ifdef RZA_USB
+			r8a66597_write(r8a66597, USBE, SYSCFG0);
+#else
 			r8a66597_write(r8a66597, SCKE, SYSCFG0);
+#endif
 			tmp = r8a66597_read(r8a66597, SYSCFG0);
 			if (i++ > 1000) {
 				printk(KERN_ERR "r8a66597: reg access fail.\n");
 				return -ENXIO;
 			}
+#ifdef RZA_USB
+		} while ((tmp & USBE) != USBE);
+		r8a66597_bclr(r8a66597, USBE, SYSCFG0);
+#else
 		} while ((tmp & SCKE) != SCKE);
 		r8a66597_write(r8a66597, 0x04, 0x02);
+#endif
 	} else {
 		do {
 			r8a66597_write(r8a66597, USBE, SYSCFG0);
@@ -116,14 +130,32 @@ static int r8a66597_clock_enable(struct r8a66597 *r8a66597)
 		} while ((tmp & SCKE) != SCKE);
 	}
 
+#ifdef RZA_USB
+	if (XTAL48 == get_xtal_from_pdata(r8a66597->pdata))
+		r8a66597_bclr(r8a66597, XTAL, SYSCFG0);
+	else
+		r8a66597_bset(r8a66597, XTAL, SYSCFG0);
+	msleep(20);
+	r8a66597_bset(r8a66597, UPLLE, SYSCFG0);
+	msleep(20);
+	r8a66597_bset(r8a66597, SUSPM, SUSPMODE0);
+#endif
+
 	return 0;
 }
 
 static void r8a66597_clock_disable(struct r8a66597 *r8a66597)
 {
+#ifndef RZA_USB
 	r8a66597_bclr(r8a66597, SCKE, SYSCFG0);
 	udelay(1);
-
+#else
+	r8a66597_bclr(r8a66597, SUSPM, SUSPMODE0);
+	r8a66597_bclr(r8a66597, UPLLE, SYSCFG0);
+	msleep(20);
+	r8a66597_bclr(r8a66597, USBE, SYSCFG0);
+	msleep(20);
+#endif
 	if (r8a66597->pdata->on_chip) {
 		clk_disable_unprepare(r8a66597->clk);
 	} else {
@@ -141,7 +173,9 @@ static void r8a66597_enable_port(struct r8a66597 *r8a66597, int port)
 	r8a66597_bset(r8a66597, val, get_syscfg_reg(port));
 	r8a66597_bset(r8a66597, HSE, get_syscfg_reg(port));
 
+#ifndef RZA_USB
 	r8a66597_write(r8a66597, BURST | CPU_ADR_RD_WR, get_dmacfg_reg(port));
+#endif
 	r8a66597_bclr(r8a66597, DTCHE, get_intenb_reg(port));
 	r8a66597_bset(r8a66597, ATTCHE, get_intenb_reg(port));
 }
@@ -168,7 +202,9 @@ static void r8a66597_disable_port(struct r8a66597 *r8a66597, int port)
 static int enable_controller(struct r8a66597 *r8a66597)
 {
 	int ret, port;
+#ifndef RZA_USB
 	u16 vif = r8a66597->pdata->vif ? LDRV : 0;
+#endif
 	u16 irq_sense = r8a66597->irq_sense_low ? INTL : 0;
 	u16 endian = r8a66597->pdata->endian ? BIGEND : 0;
 
@@ -176,7 +212,9 @@ static int enable_controller(struct r8a66597 *r8a66597)
 	if (ret < 0)
 		return ret;
 
+#ifndef RZA_USB
 	r8a66597_bset(r8a66597, vif & LDRV, PINCFG);
+#endif
 	r8a66597_bset(r8a66597, USBE, SYSCFG0);
 
 	r8a66597_bset(r8a66597, BEMPE | NRDYE | BRDYE, INTENB0);
@@ -2459,8 +2497,13 @@ static int r8a66597_probe(struct platform_device *pdev)
 	r8a66597->irq_sense_low = irq_trigger == IRQF_TRIGGER_LOW;
 
 	if (r8a66597->pdata->on_chip) {
-		snprintf(clk_name, sizeof(clk_name), "usb%d", pdev->id);
-		r8a66597->clk = clk_get(&pdev->dev, clk_name);
+		if (pdev->dev.of_node) {
+			r8a66597->clk = devm_clk_get(&pdev->dev, NULL);
+		}
+		else {
+			snprintf(clk_name, sizeof(clk_name), "usb%d", pdev->id);
+			r8a66597->clk = clk_get(&pdev->dev, clk_name);
+		}
 		if (IS_ERR(r8a66597->clk)) {
 			dev_err(&pdev->dev, "cannot get clock \"%s\"\n",
 				clk_name);
@@ -2525,3 +2568,87 @@ static struct platform_driver r8a66597_driver = {
 };
 
 module_platform_driver(r8a66597_driver);
+
+/* Device Tree Support */
+static struct resource r8a66597_usb_host_resources[2];
+static struct platform_device_info r8a66597_usb_host_info[2];
+static struct r8a66597_platdata r8a66597_pdata = {
+	.endian = 0,
+	.on_chip = 1,
+	.xtal = R8A66597_PLATDATA_XTAL_48MHZ,
+};
+
+static int r8a66597_of_probe(struct platform_device *pdev) {
+	struct platform_device_info* platinfo;
+	static struct resource* resources;
+	static struct resource *base, *irq;
+	struct platform_device *new_pdev;
+	static int id = 0;
+	struct device_node *np = pdev->dev.of_node;
+
+	if (id >= 2) {
+		dev_err(&pdev->dev, "invalid channel number\n");
+		return -ENODEV;
+	}
+
+	base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (IS_ERR(base)) {
+		dev_err(&pdev->dev, "couldn't get reg\n");
+		return -ENODEV;
+	}
+
+	irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	if (IS_ERR(irq)) {
+		dev_err(&pdev->dev, "couldn't get irq\n");
+		return -ENODEV;
+	}
+
+	resources = &r8a66597_usb_host_resources[id];
+	memcpy(resources, base, sizeof(struct resource));
+	memcpy(resources + 1, irq, sizeof(struct resource));
+
+	platinfo = &r8a66597_usb_host_info[id];
+
+	platinfo->name = "r8a66597_hcd";
+	platinfo->id = id;
+	platinfo->data = &r8a66597_pdata;
+	platinfo->size_data = sizeof(r8a66597_pdata);
+	platinfo->res = resources;
+	platinfo->num_res = 2;
+
+	id++;
+
+	if (np) {
+		if (of_property_read_bool(np, "xtal-48mhz"))
+			r8a66597_pdata.xtal = R8A66597_PLATDATA_XTAL_48MHZ;
+		if (of_property_read_bool(np, "xtal-12mhz"))
+			r8a66597_pdata.xtal = R8A66597_PLATDATA_XTAL_12MHZ;
+	}
+
+	new_pdev = platform_device_register_full(platinfo);
+	if (IS_ERR(new_pdev))
+		return PTR_ERR(new_pdev);
+
+	return 0;
+}
+
+static int r8a66597_of_remove(struct platform_device *pdev) {
+	return 0;
+}
+
+static const struct of_device_id of_r8a66597_match[] = {
+	{ .compatible = "renesas,r8a66597-hdc",},
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, of_r8a66597_match);
+
+static struct platform_driver r8a66597_of_driver = {
+	.probe = r8a66597_of_probe,
+	.remove = r8a66597_of_remove,
+	.driver = {
+		.name = "r8a66597-hcd-of",
+		.owner = THIS_MODULE,
+		.of_match_table = of_r8a66597_match,
+	},
+};
+module_platform_driver (r8a66597_of_driver);
