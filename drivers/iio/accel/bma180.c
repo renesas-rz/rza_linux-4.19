@@ -92,6 +92,7 @@ struct bma180_part_info {
 #define BMA180_RESET_VAL	0xb6
 
 #define BMA180_ID_REG_VAL	0x03
+#define BMA250E_ID_REG_VAL	0xF9
 
 /* Chip power modes */
 #define BMA180_LOW_POWER	0x03
@@ -309,7 +310,7 @@ static int bma180_chip_init(struct bma180_data *data)
 
 	if (ret < 0)
 		return ret;
-	if (ret != BMA180_ID_REG_VAL)
+	if ((ret != BMA180_ID_REG_VAL) && (ret != BMA250E_ID_REG_VAL))
 		return -ENODEV;
 
 	ret = bma180_soft_reset(data);
