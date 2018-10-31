@@ -1,0 +1,12 @@
+config FB_VDC5
+	tristate "RZ/A frame-buffer driver for VDC5/VDC6"
+	depends on FB
+	depends on ARCH_R7S72100 || ARCH_R7S9210
+	select FB_SYS_FILLRECT
+	select FB_SYS_COPYAREA
+	select FB_SYS_IMAGEBLIT
+	select FB_SYS_FOPS
+	select FB_MODE_HELPERS
+	select VIDEOMODE_HELPERS
+	help
+	  Frame-buffer device for the Renesas RZ/A based SoC
