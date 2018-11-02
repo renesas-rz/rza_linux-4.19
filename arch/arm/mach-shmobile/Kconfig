@@ -128,4 +128,21 @@ config ARCH_SH73A0
 	bool "SH-Mobile AG5 (R8A73A00)"
 	select ARCH_RMOBILE
 	select RENESAS_INTC_IRQPIN
+
+if ARCH_R7S72100
+comment "Renesas RZ/A1 Board Support"
+
+#--------------------------------------------
+# Renesas RZ/A Boards
+#--------------------------------------------
+config MACH_RSKRZA1
+	bool "RZ/A1 RSK board"
+
+#--------------------------------------------
+# Custom RZ/A Boards
+# Enter your custom board files below this line (to avoid merge conflicts)
+#---------------------------------------------
+
+
+endif
 endif

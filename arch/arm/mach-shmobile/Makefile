@@ -15,6 +15,17 @@ obj-$(CONFIG_ARCH_R8A7779)	+= setup-r8a7779.o
 obj-$(CONFIG_ARCH_EMEV2)	+= setup-emev2.o
 obj-$(CONFIG_ARCH_R7S72100)	+= setup-r7s72100.o
 
+#--------------------------------------------
+# Renesas RZ/A Boards
+#--------------------------------------------
+obj-$(CONFIG_MACH_RSKRZA1)	+= board-rskrza1.o
+
+#--------------------------------------------
+# Custom RZ/A Boards
+# Enter your custom board files below this line (to avoid merge conflicts)
+#---------------------------------------------
+
+
 # CPU reset vector handling objects
 cpu-y				:= platsmp.o headsmp.o
 
