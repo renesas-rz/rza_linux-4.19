@@ -19,7 +19,7 @@
 	};
 
 	chosen {
-		bootargs = "ignore_loglevel";
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000 root=/dev/mtdblock0                                              ";
 		stdout-path = "serial0:115200n8";
 	};
 
@@ -41,6 +41,27 @@
 			gpios = <&port7 1 GPIO_ACTIVE_LOW>;
 		};
 	};
+
+	/* File System */
+	/* Remember, we'll be in dual QSPI XIP mode at this point */
+	/* Requires CONFIG_MTD_ROM=y */
+	qspi@18000000 {
+		compatible = "mtd-rom";
+		probe-type = "map_rom";
+		reg = <0x18000000 0x4000000>;	/* 64 MB*/
+		bank-width = <4>;
+		device-width = <1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@800000 {
+			label ="user";
+			reg = <0x0800000 0x800000>; /* 8MB @ 0x18800000 */
+			read-only;
+		};
+	};
+
 };
 
 &extal_clk {
@@ -97,6 +118,68 @@
 			 <RZA1_PINMUX(3, 14, 7)>,	/* SD_D3_1 */
 			 <RZA1_PINMUX(3, 15, 7)>;	/* SD_D2_1 */
 	};
+
+	/* RIIC ch0 (Touchscreen) */
+	i2c0_pins: i2c0 {
+		pinmux = <RZA1_PINMUX(1, 0, 1)>,	/* RIIC0SCL */
+			 <RZA1_PINMUX(1, 1, 1)>;	/* RIIC0SDA */
+	};
+
+	/* IRQ1 (Touchscreen) */
+	irq1_pins: irq1 {
+		pinmux = <RZA1_PINMUX(4, 9, 8)>;	/* IRQ1 */
+	};
+
+	/* RIIC ch3 (Port Expander, EEPROM (MAC Addr), Audio Codec) */
+	i2c3_pins: i2c3 {
+		pinmux = <RZA1_PINMUX(1, 6, 1)>,	/* RIIC3SCL */
+			 <RZA1_PINMUX(1, 7, 1)>;	/* RIIC3SDA */
+	};
+
+	/* VDC5 LCD ch 0 */
+	vdc50_pins: vdc50 {
+
+		pinmux =
+			/* LCD0_DATA0 to LCD0_DATA7 is P11_0 to P11_7 */
+			<RZA1_PINMUX(11, 0,  5)>,	/* LCD0_DATA0 */
+			<RZA1_PINMUX(11, 1,  5)>,	/* LCD0_DATA1 */
+			<RZA1_PINMUX(11, 2,  5)>,	/* LCD0_DATA2 */
+			<RZA1_PINMUX(11, 3,  5)>,	/* LCD0_DATA3 */
+			<RZA1_PINMUX(11, 4,  5)>,	/* LCD0_DATA4 */
+			<RZA1_PINMUX(11, 5,  5)>,	/* LCD0_DATA5 */
+			<RZA1_PINMUX(11, 6,  5)>,	/* LCD0_DATA6 */
+			<RZA1_PINMUX(11, 7,  5)>,	/* LCD0_DATA7 */
+
+			/* LCD0_DATA8 to LCD0_DATA23 is all of P10_0 to P10_15 */
+			<RZA1_PINMUX(10, 0,  5)>,	/* LCD0_DATA8 */
+			<RZA1_PINMUX(10, 1,  5)>,	/* LCD0_DATA9 */
+			<RZA1_PINMUX(10, 2,  5)>,	/* LCD0_DATA10 */
+			<RZA1_PINMUX(10, 3,  5)>,	/* LCD0_DATA11 */
+			<RZA1_PINMUX(10, 4,  5)>,	/* LCD0_DATA12 */
+			<RZA1_PINMUX(10, 5,  5)>,	/* LCD0_DATA13 */
+			<RZA1_PINMUX(10, 6,  5)>,	/* LCD0_DATA14 */
+			<RZA1_PINMUX(10, 7,  5)>,	/* LCD0_DATA15 */
+			<RZA1_PINMUX(10, 8,  5)>,	/* LCD0_DATA16 */
+			<RZA1_PINMUX(10, 9,  5)>,	/* LCD0_DATA17 */
+			<RZA1_PINMUX(10, 10, 5)>,	/* LCD0_DATA18 */
+			<RZA1_PINMUX(10, 11, 5)>,	/* LCD0_DATA19 */
+			<RZA1_PINMUX(10, 12, 5)>,	/* LCD0_DATA20 */
+			<RZA1_PINMUX(10, 13, 5)>,	/* LCD0_DATA21 */
+			<RZA1_PINMUX(10, 14, 5)>,	/* LCD0_DATA22 */
+			<RZA1_PINMUX(10, 15, 5)>,	/* LCD0_DATA23 */
+
+
+			/* TCON pins (some may not be used) */
+			//<RZA1_PINMUX(11,14, 5)>,	/* LCD0_TCON0 */
+			//<RZA1_PINMUX(11,13, 5)>,	/* LCD0_TCON1 */
+			<RZA1_PINMUX(11,12, 5)>,	/* LCD0_TCON2 */
+			<RZA1_PINMUX(11,11, 5)>,	/* LCD0_TCON3 */
+			<RZA1_PINMUX(11,10, 5)>,	/* LCD0_TCON4 */
+			//<RZA1_PINMUX(11,9,  5)>,	/* LCD0_TCON5 */
+			//<RZA1_PINMUX(11,8,  5)>,	/* LCD0_TCON6 */
+
+			<RZA1_PINMUX(11, 15, 5)>;	/* LCD0_CLK */
+	};
 };
 
 &mtu2 {
@@ -113,12 +196,62 @@
 		reg = <0>;
 	};
 };
+&dma0  {
+			/*slave id for another device*/
+	slave_id=<	RZA1DMA_SLAVE_SDHI0_TX
+			RZA1DMA_SLAVE_SDHI0_RX
+			RZA1DMA_SLAVE_SDHI1_TX
+			RZA1DMA_SLAVE_SDHI1_RX
+			RZA1DMA_SLAVE_MMCIF_TX
+			RZA1DMA_SLAVE_MMCIF_RX
+			RZA1DMA_SLAVE_PCM_MEM_SSI0
+			RZA1DMA_SLAVE_PCM_MEM_SRC1
+			RZA1DMA_SLAVE_PCM_SSI0_MEM
+			RZA1DMA_SLAVE_PCM_SRC0_MEM>;
+		/* address of slave device*/
+	addr=<	0xe804e030 /*first for SDHI0_TX*/
+		0xe804e030
+		0xe804e830
+		0xe804e830
+		0xe804c834
+		0xe804c834
+		0xe820b018
+		0xe820970c
+		0xe820b01c
+		0xe8209718>;
+		/*channel config (chcfg) for slave device, first for SDHI0_TX*/
+	chcfg=<	0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0 /*.reqd .loen .hien .lvl .am .sds .dds .tm*/
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x1 0x1 0x0
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x0 0x0 0x1 0x1 0x1 0x1 0x1 0x0>;
+
+		/*dmas for slave device, first for SDHI0_TX*/
+	dmars=<	0x1 0x30	/*.rid .mid*/
+		0x2 0x30
+		0x1 0x31
+		0x2 0x31
+		0x1 0x32
+		0x2 0x32
+		0x1 0x38
+		0x1 0x41
+		0x2 0x38
+		0x2 0x40>;
+};
 
 &sdhi1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdhi1_pins>;
 	bus-width = <4>;
 	status = "okay";
+
+	dmas = <&dma0 RZA1DMA_SLAVE_SDHI1_TX>, <&dma0 RZA1DMA_SLAVE_SDHI1_RX>;
+	dma-names = "tx", "rx";
 };
 
 &ostm0 {
@@ -138,3 +271,574 @@
 	pinctrl-0 = <&scif2_pins>;
 	status = "okay";
 };
+
+/* RIIC0 (Touchscreen) */
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+	clock-frequency = <400000>;
+
+	ft5x06_ts@38 {
+		compatible = "focaltech,ft5x06";
+		reg = <0x38>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&irq1_pins>;
+		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_LOW>; /* IRQ1 */
+
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <480>;
+
+		/* The touchscreen on the RSK LCD is backwards for some reason */
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+	};
+};
+
+/* RIIC3: Port Expander, EEPROM (MAC Addr), Audio Codec */
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pins>;
+	status = "okay";
+	clock-frequency = <100000>;
+
+	max9856: codec@10 {
+		compatible = "renesas,max9856_codec";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+	};
+};
+
+&usbhost0 {
+	status = "okay";
+	xtal-48mhz;
+};
+
+&usbhost1 {
+	/* NOTE: You MUST enable USB ch0 (host or device) first because
+	   there are some shared registers bits in USB0 that USB1 needs. */
+	status = "okay";
+	xtal-48mhz;
+};
+
+/* RSK LCD: 800x600 LCD */
+/* Pacer TFT LCD Panel, Model gwp0700cnwv04 */
+#if XIP_KERNEL_WITHOUT_EXTERNAL_RAM
+  #define VDC5_0_BPP 16 /* 16bpp or 32bpp */
+  #define VDC5_0_FBSIZE (800*480*VDC5_0_BPP/8)
+  #define VDC5_0_FB_ADDR 0	/* allocate memory at probe */
+#else
+  #define VDC5_0_BPP 32 /* 16bpp or 32bpp */
+  #define VDC5_0_FBSIZE (800*480*VDC5_0_BPP/8)
+  #define VDC5_0_FB_ADDR (0x60000000) /* fixed address in PAGE 0 */
+#endif
+
+&vdc50 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc50_pins>;
+
+	display = <&display0>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC5_0_FB_ADDR>;
+	fb_phys_size = <VDC5_0_FBSIZE>;
+
+	panel_name = "gwp0700cnwv04";
+	panel_pixel_xres = <800>;	/* panel native resolution */
+	panel_pixel_yres = <480>;	/* panel native resolution */
+
+	/* Double Buffering. Reserves 2x memory space as frame buffer */
+	/* Use "ioctl(fb0_fd, FBIOPAN_DISPLAY, &var)" from application
+	 * space to change "var.yoffset=Y" where 'Y' is from 0 to var.yres
+	 */
+	//double_buffer;	/* Uncomment for double buffering */
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <3>;	/* 3=ICKSEL_P1CLK (Peripheral clock 1) */
+	panel_ocksel = <0>;	/* (don't care when lvds=0 ) */
+	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	use_lvds = <0>;		/* Set to 0 or 1 */
+
+	/* How are the TCON pins going to be used */
+	tcon_sel = <
+		0xff	/* TCON0: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON1: 0xff=TCON_SEL_UNUSED */
+		7	/* TCON2:    7=TCON_SEL_DE (DATA ENABLE) */
+		2	/* TCON3:    2=TCON_SEL_STH (HSYNC) */
+		0	/* TCON4:    0=TCON_SEL_STVA (VSYNC) */
+		0xff	/* TCON5: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON6: 0xff=TCON_SEL_UNUSED */
+		>;
+
+	display0: display0 {
+		bits-per-pixel = <VDC5_0_BPP>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33325000>; /* P1 clk / 2 */
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <26>;		/* back porch = 'HS Blanking'(46) - hsync-len(20) */
+				hfront-porch = <210>;		/* 'HS Front Porch (210)' */
+				vback-porch = <13>;		/* back porch = 'VS Blanking'(23) - vsync-len(10) */
+				vfront-porch = <22>;		/* 'VS Front Porch(22)' */
+				hsync-len = <20>;		/* pulse width of HSYNC (min=1, max=40) */
+				vsync-len = <10>;		/* pulse width of VSYNC (min=1, max=20) */
+				hsync-active = <1>; 		/* HSYNC pulse is: 0=Active LOW, 1=Active HIGH */
+				vsync-active = <1>; 		/* VSYNC pulse is: 0=Active LOW, 1=Active HIGH */
+				de-active = <0>; 		/* Data Enable signal is: 0=Active LOW , 1= Active HIGH */
+				pixelclk-active = <0>; 		/* Pixel Data clock polarity: 0=drive pixel data on falling edge and sample data on rising edge */
+			};
+		};
+	};
+};
+
+/* Audio in/out */
+/* requires
+ * CONFIG_SOUND=y
+ * CONFIG_SND=y
+ * CONFIG_SND_SOC=y
+ * CONFIG_SND_SCUX_RSKRZA1=y
+ * CONFIG_RZA_DMA=y
+ */
+/ {
+	sound_machine: sound@0 {
+		compatible = "renesas,rskrza1_sound_alsa";
+	};
+
+	sound: scux-pcm-audio@e8208000 {
+		compatible = "renesas,rskrza1_scux";
+		reg = <0xe8208000 0x00001778>,
+		      <0xe820b000 0x00002830>;
+		channel = <0>;
+	};
+};
+
+
+/* ========== Disable LED Heartbeat ========== */
+#if 0
+/* The LEDs are controlled using I2C inside a kernel thread that is
+ * started in the board-rskrza1.c file. */
+/ {
+	no-heartbeat;
+};
+#endif
+
+/* ========== LED GPIO Example ========== */
+/* To control LED0 on the RSK board.
+ *
+ * Requires:
+ *   CONFIG_NEW_LEDS=y
+ *   CONFIG_LEDS_CLASS=y
+ *   CONFIG_LEDS_GPIO=y
+ *
+ * LED ON:  echo 255 > /sys/class/leds/led0/brightness
+ * LED OFF: echo 0   > /sys/class/leds/led0/brightness
+*/
+
+/* ========== RSPI Example ========== */
+#if 0
+/* RSPI4 was tested by hooking up a SPI flash to CN15.
+ * Requires:
+ *   CONFIG_MTD=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_M25P80=y
+ *
+ * Note that you must change the IO MUX (IC29) on the RSK board
+ * to enable the CN15 connector (which disconnects Ethernet).
+ * Please enter this command in u-boot on the RSK board before booting
+ *   => io_mux c
+ *
+ * After boot:
+ * $ cat /proc/mtd
+ * dev:    size   erasesize  name
+ * mtd0: 00800000 04000000 "user"
+ * mtd1: 00400000 00010000 "spi-data1"
+ * mtd2: 00400000 00010000 "spi-data2"
+ *
+ * After that you should see some messages saying that your SPI flash has been
+ * detected.
+ * Then you can do things like erase and mount a JFFS2 file system:
+ * $ flash_eraseall -j /dev/mtd1
+ * $ mount -t jffs2 /dev/mtdblock1 /mnt
+ */
+
+/ {
+	rspi-testing;
+};
+&ether {
+	/* RSKRZA1 Board SPI4 is on CN15 (that means you can't use Ethernet) */
+	status = "disabled";
+};
+
+/* Pin setup for RSPI4 */
+&pinctrl {
+
+	/* RSPI4 on CN15 */
+	rspi4_pins: rspi4 {
+		pinmux = <RZA1_PINMUX(2, 8,  8)>,	/* RSPCK4 */
+			 <RZA1_PINMUX(2, 9,  8)>,	/* SSL40 */
+			 <RZA1_PINMUX(2, 10, 8)>,	/* MOSI4 */
+			 <RZA1_PINMUX(2, 11, 8)>;	/* MISO4 */
+	};
+};
+
+&spi4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rspi4_pins>;
+	status = "okay";
+
+	flash@0 {
+	/* 	compatible = "spansion,s25fl512s", "jedec,spi-nor"; */
+		compatible = "jedec,spi-nor";	/* let it auto-detect the flash */
+		reg = <0>;
+		spi-max-frequency = <30000000>;
+
+		/* SPI Mode 3 */
+		spi-cpol;
+		spi-cpha;
+
+		m25p,fast-read;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "spi-data1";
+				reg = <0x00000000 0x00400000>;
+				/* read-only; */
+			};
+			partition@40000 {
+				label = "spi-data2";
+				reg = <0x00400000 0x00400000>;
+			};
+		};
+	};
+
+};
+
+#endif /* RSPI Testing */
+
+
+/* ========== eMMC Example ========== */
+#if 0
+/*
+ * MMC devices requires a 3.3 volt regulator node.
+ * Add a 3.3v "regulator-fixed" node at the root
+ */
+/ {
+	d3_3v: regulator-d3-3v {
+		compatible = "regulator-fixed";
+		regulator-name = "D3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+};
+
+/* Disable SDHI ch1 (since SDHI-1 and MMC both share CN1) */
+&sdhi1 {
+	status = "disabled";
+};
+
+/* Pin setup for MMC */
+&pinctrl {
+
+	/* MMC on CN1 */
+	mmc_pins: mmc {
+		pinmux = <RZA1_PINMUX(3, 8,  8)>,	/* MMC_CD */
+			 <RZA1_PINMUX(3, 10, 8)>,	/* MMC_D1 */
+			 <RZA1_PINMUX(3, 11, 8)>,	/* MMC_D0 */
+			 <RZA1_PINMUX(3, 12, 8)>,	/* MMC_CLK */
+			 <RZA1_PINMUX(3, 13, 8)>,	/* MMC_CMD */
+			 <RZA1_PINMUX(3, 14, 8)>,	/* MMC_D3 */
+			 <RZA1_PINMUX(3, 15, 8)>,	/* MMC_D2 */
+			 <RZA1_PINMUX(4, 0,  8)>,	/* MMC_D4 */
+			 <RZA1_PINMUX(4, 1,  8)>,	/* MMC_D5 */
+			 <RZA1_PINMUX(4, 2,  8)>,	/* MMC_D6 */
+			 <RZA1_PINMUX(4, 3,  8)>;	/* MMC_D7 */
+	};
+};
+
+/* Add the MMC device node */
+&mmcif {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc_pins>;
+	vmmc-supply = <&d3_3v>;
+	vqmmc-supply = <&d3_3v>;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};
+#endif /* MMC Testing */
+
+
+/* ========== Parallel NOR Flash Example ========== */
+#if 0
+/* 256 MiB NOR Flash
+ *
+ * Requires:
+ *   CONFIG_MTD=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_PHYSMAP=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_PHYSMAP_OF=y
+ *   CONFIG_MTD_CFI=y
+ *   CONFIG_MTD_CFI_AMDSTD=y
+ *   CONFIG_JFFS2 = y
+ *
+ * Testing:
+ * $ cat /proc/mtd
+ * dev:    size   erasesize  name
+ * mtd0: 00800000 04000000 "user"
+ * mtd1: 01000000 00020000 "nor_apps"
+ * mtd2: 01000000 00020000 "nor_data"
+ *
+ * $ flash_eraseall -j /dev/mtd1
+ * $ mkdir /tmp/flash
+ * $ mount -t jffs2 /dev/mtdblock1 /tmp/flash
+ * $ ls
+ *
+ * # Program a rootfs.jffs2 from Buildroot to the NOR Flash (maybe form a USB drive)
+ * $ flashcp <image dir>/rootfs.jffs2 /dev/mtd1
+ *     or
+ * $ cat /mnt/usb/rootfs.jffs2 > /dev/mtd1
+ *
+*/
+
+/ {
+	nor: flash@0 {
+		compatible = "cfi-flash";
+		reg = <0x00000000 0x2000000>;	/* 32 MB*/
+		bank-width = <2>;
+		device-width = <2>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@0 {
+			label ="nor_apps";
+			reg = <0x00000000 0x01000000>; /* 16MB */
+		};
+
+		partition@01000000 {
+			label ="nor_data";
+			reg = <0x01000000 0x01000000>; /* 16MB */
+		};
+	};
+};
+#endif /* Parallel NOR Flash Testing */
+
+
+/* ========== 1280x800 LVDS LCD Example ========== */
+#if 0
+/* LVDS Panel: HSD070PWW1 -B01 | 1280x800 (WXVGA), 7", LVDS, 16bpp */
+#define VDC5_1_BPP 16
+#define VDC5_1_FBSIZE (1280*800*VDC5_1_BPP/8)
+#define VDC5_1_FB_ADDR (0x60200000) /* fixed address in PAGE 2 */
+
+&vdc50 {
+	/* Disable the RSK LCD (although, we really done need to because
+	 * we can drive 2 different displays at the same time */
+	status = "disabled";
+};
+
+/* Pin setup for LVDS */
+&pinctrl {
+	/* VDC5 LCD ch 1 */
+	vdc51_pins: vdc51 {
+		pinmux = <RZA1_PINMUX(5, 0, 1)>,	/* TXCLKOUTP */
+			 <RZA1_PINMUX(5, 1, 1)>,	/* TXCLKOUTM */
+			 <RZA1_PINMUX(5, 2, 1)>,	/* TXOUT2P */
+			 <RZA1_PINMUX(5, 3, 1)>,	/* TXOUT2M */
+			 <RZA1_PINMUX(5, 4, 1)>,	/* TXOUT1P */
+			 <RZA1_PINMUX(5, 5, 1)>,	/* TXOUT1M */
+			 <RZA1_PINMUX(5, 6, 1)>,	/* TXOUT0P */
+			 <RZA1_PINMUX(5, 7, 1)>;	/* TXOUT0M */
+	};
+};
+
+&vdc51 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc51_pins>;
+
+	display = <&display1>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC5_1_FB_ADDR>;
+	fb_phys_size = <VDC5_1_FBSIZE>;
+
+	panel_name = "HSD070PWW1";
+	panel_pixel_xres = <1280>;	/* panel native resolution */
+	panel_pixel_yres = <800>;	/* panel native resolution */
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <0>;	/* (don't care when lvds=1) */
+	panel_ocksel = <2>;	/* 2=OCKSEL_PLL_DIV7 (LVDS PLL clock divided by 7) */
+	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	use_lvds = <1>;		/* Set to 0 or 1 */
+
+	/* How are the TCON pins going to be used */
+	tcon_sel = <
+		0xff	/* TCON0: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON1: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON2: 0xff=TCON_SEL_UNUSED */
+		7	/* TCON3:    7=TCON_SEL_DE (DATA ENABLE) */
+		0xff	/* TCON4: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON5: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON6: 0xff=TCON_SEL_UNUSED */
+		>;
+
+	display1: display1 {
+		bits-per-pixel = <VDC5_1_BPP>;		/* Set to 16 or 32 */
+		bus-width = <16>;
+
+		display-timings {
+			native-mode = <&timing1>;
+			timing1: timing1 {
+				clock-frequency = <71100000>; /* min:64.3MHz, typ:71.1MHz, max:82MHz */
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <16>;
+				hfront-porch = <16>;
+				vback-porch = <24>;
+				vfront-porch = <1>;
+				hsync-len = <136>; /* max */
+				vsync-len = <3>; /* max */
+				hsync-active = <1>; /* HIGH */
+				vsync-active = <1>; /* HIGH */
+				de-active = <0>; /* LOW */
+				pixelclk-active = <0>; /* ??? */
+			};
+		};
+	};
+};
+#endif /* LVDS Testing */
+
+/* ========== SPIBSC (QSPI) Example ========== */
+#if 0
+/* Booted as uImage with a initramfs. (or with a USB Flash drive)
+ *
+ * * Requires:
+ *   CONFIG_MTD=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_M25P80=y
+ *
+ * NOTE: When booting, do NOT leave the QSPI in XIP mode (ie, the 'qspi single' command
+ *
+ * When booting, you should see:
+ *   spibsc 3fefa000.spi: JEDEC ID = 010220
+ *   spibsc 3fefa000.spi: Quad Read enabled for Spansion
+ *   m25p80 spi5.0: s25fl512s (65536 Kbytes)
+ *   4 ofpart partitions found on MTD device spi5.0
+ *   Creating 4 MTD partitions on "spi5.0":
+ *   0x000000000000-0x000000080000 : "u-boot"
+ *   0x000000080000-0x0000000c0000 : "env"
+ *   0x0000000c0000-0x000000100000 : "dtb"
+ *   0x000002000000-0x000002100000 : "spibsc-rootfs"
+ *
+ * After boot:
+ * $ cat /proc/mtd
+ * dev:    size   erasesize  name
+ * mtd0: 00800000 04000000 "user"
+ * mtd1: 00080000 00040000 "u-boot"
+ * mtd2: 00040000 00040000 "env"
+ * mtd3: 00040000 00040000 "dtb"
+ * mtd4: 00100000 00040000 "spibsc-rootfs"
+ *
+ * You can do things like erase and mount a JFFS2 file system:
+ * $ flash_eraseall -j /dev/mtd4
+ * $ mount -t jffs2 /dev/mtdblock4 /mnt
+ * $ echo "hello" > /mnt/hello.txt
+ * $ sync
+ */
+/ {
+	chosen {
+#if 0
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000              ";
+#else
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000 rootwait root=/dev/mmcblk0p1   ";
+#endif
+		stdout-path = "serial0:115200n8";
+	};
+};
+
+&spibsc0 {
+	status = "okay";
+
+	flash@0 {
+	/*	compatible = "spansion,s25fl512s", "jedec,spi-nor"; */
+		compatible = "jedec,spi-nor";	/* let it auto-detect the flash */
+		reg = <0>;
+
+		spi-max-frequency = <66000000>;
+
+		/* SPI Mode 3 */
+		spi-cpol;
+		spi-cpha;
+		m25p,fast-read;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0000000 {
+				label = "u-boot";
+				reg = <0x00000000 0x80000>;
+				read-only;
+			};
+			partition@80000 {
+				label = "env";
+				reg = <0x00080000 0x40000>;
+				read-only;
+			};
+			partition@C0000 {
+				label = "dtb";
+				reg = <0x000C0000 0x40000>;
+				read-only;
+			};
+			partition@2000000 {
+				label = "spibsc-rootfs";
+				reg = <0x02000000 0x01000000>;	/* 16MB @ 32MB offset in SPI Flash */
+			};
+		};
+	};
+};
+#endif
+
+/* ========== USB Function Example ========== */
+/* This uses the USB Ethernet gadget for testing.
+ * Therefore, make sure to set
+ *	CONFIG_USB_GADGET=y
+ *	CONFIG_USB_RENESAS_USBHS=y
+ *	CONFIG_USB_RENESAS_USBHS_UDC=y
+ * 	CONFIG_USB_ETH=y
+ * 	CONFIG_USB_ETH_RNDIS=y
+ * in your kernel config.
+ *
+ * On the RSK board make sure you set : JP11 = Open
+ */
+#if 0
+&usbhost0 {
+	status = "disabled";
+};
+
+&usbhost1 {
+	status = "disabled";
+};
+
+&usbhs0 {
+	status = "okay";
+};
+#endif
