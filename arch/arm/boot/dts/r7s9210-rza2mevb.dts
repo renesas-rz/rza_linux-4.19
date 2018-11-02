@@ -1,0 +1,573 @@
+/*
+ * Device Tree Source for the RZA2MEVB board
+ *
+ * Copyright (C) 2018 Renesas Electronics
+ *
+ * This file is dual-licensed: you can use it either under the terms
+ * of the GPL or the X11 license, at your option. Note that this dual
+ * licensing only applies to this file, and not this project as a
+ * whole.
+ *
+ *  a) This file is free software; you can redistribute it and/or
+ *     modify it under the terms of the GNU General Public License as
+ *     published by the Free Software Foundation; either version 2 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This file is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ * Or, alternatively,
+ *
+ *  b) Permission is hereby granted, free of charge, to any person
+ *     obtaining a copy of this software and associated documentation
+ *     files (the "Software"), to deal in the Software without
+ *     restriction, including without limitation the rights to use,
+ *     copy, modify, merge, publish, distribute, sublicense, and/or
+ *     sell copies of the Software, and to permit persons to whom the
+ *     Software is furnished to do so, subject to the following
+ *     conditions:
+ *
+ *     The above copyright notice and this permission notice shall be
+ *     included in all copies or substantial portions of the Software.
+ *
+ *     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ *     OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/dts-v1/;
+#include "r7s9210.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/r7s9210-pinctrl.h>
+
+/ {
+	model = "RZA2MEVB";
+	compatible = "renesas,rza2mevb", "renesas,r7s9210";
+
+	aliases {
+		/* It is recommended to always map the serial console as /dev/ttySC0
+		 * in you system regardless of the actual SCIF channel used */
+		serial0 = &scif4;
+	};
+
+	chosen {
+		/* Keep extra spaces at the end in case you want to add additional command line options from u-boot */
+		bootargs = "ignore_loglevel earlycon rootfstype=axfs root=/dev/null rootflags=physaddr=0x20800000                   ";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		//reg = <0x80000000 0x00400000>;	 /* 4Mbyte of Internal RAM only */
+		reg = <0x40000000 0x00800000>;	 /* 8Mbyte of HyperRAM only */
+	};
+
+	lbsc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+	};
+
+#if 1 /* LED (GPIO) as an example */
+	// echo 1 > /sys/devices/platform/leds/leds/led0/brightness
+	// echo 0 > /sys/devices/platform/leds/leds/led0/brightness
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+
+		led0 {
+			gpios = <&pinctrl RZA2_PIN(P6, 0) GPIO_ACTIVE_HIGH>;	/* P6_0 */
+		};
+	};
+#endif
+
+#if 1 /* Read Only File system in QSPI Example */
+	/* File System in XIP QSPI */
+	/* Remember, we'll be in QSPI XIP mode at this point */
+	/* Requires CONFIG_MTD_ROM=y */
+	qspi@18000000 {
+		compatible = "mtd-rom";
+		//probe-type = "map_rom";
+		probe-type = "direct-mapped";	// XIP from QSPI
+		reg = <0x20000000 0x4000000>;	/* 64 MB*/
+		bank-width = <4>;
+		device-width = <1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@800000 {
+			label ="rootfs_xipcramfs";
+			reg = <0x0800000 0x1000000>; /* 16MB @ 0x20800000 */
+			read-only;
+		};
+	};
+#endif
+};
+
+/* EXTAL */
+&extal_clk {
+	clock-frequency = <24000000>;	/* 24MHz */
+};
+
+/* RTC_X1 (remove if not populated) */
+&rtc_x1_clk {
+	clock-frequency = <32768>;
+};
+
+/* High resolution System tick timers */
+&ostm0 {
+	status = "okay";
+};
+
+&ostm1 {
+	status = "okay";
+};
+
+/*
+ * Define your pin settings here
+ *
+ */
+&pinctrl {
+
+	/* Serial Console */
+	scif4_pins: serial4 {
+		pinmux = <RZA2_PINMUX(P9, 0, 4)>,	/* TxD4 */
+			 <RZA2_PINMUX(P9, 1, 4)>;	/* RxD4 */
+	};
+	
+	/* RIIC ch3 (Touchscreen, EEPROM) */
+	i2c3_pins: i2c3 {
+		pinmux = <RZA2_PINMUX(PD, 6, 1)>,	/* RIIC3SCL */
+			 <RZA2_PINMUX(PD, 7, 1)>;	/* RIIC3SDA */
+	};
+
+	/* RSPI ch3 (EEPROM) */
+	spi0_pins: spi0 {
+		pinmux = <RZA2_PINMUX(P8, 5, 4)>,	/* MISO0 */
+			 <RZA2_PINMUX(P8, 6, 4)>,	/* MOSI0 */
+			 <RZA2_PINMUX(P8, 7, 4)>,	/* CLK0 */
+			 <RZA2_PINMUX(P8, 4, 4)>;	/* SSL0 */
+	};
+
+	/* SDHI 0 */
+	sdhi0_pins: sdhi0 {
+		pinmux = <RZA2_PINMUX(P5, 0, 3)>,	/* SD0_CD */
+			 <RZA2_PINMUX(P5, 1, 3)>;	/* SD0_WP */
+	};
+
+	/* Ethernet - RMII mode */
+	/* Channel 0 */
+	eth0_pins: eth0 {
+		pinmux = <RZA2_PINMUX(PE, 0, 7)>, /* REF50CK0 */
+			 <RZA2_PINMUX(P6, 1, 7)>, /* RMMI0_TXDEN */
+			 <RZA2_PINMUX(P6, 2, 7)>, /* RMII0_TXD0 */
+			 <RZA2_PINMUX(P6, 3, 7)>, /* RMII0_TXD1 */
+			 <RZA2_PINMUX(PE, 4, 7)>, /* RMII0_CRSDV */
+			 <RZA2_PINMUX(PE, 1, 7)>, /* RMII0_RXD0 */
+			 <RZA2_PINMUX(PE, 2, 7)>, /* RMII0_RXD1 */
+			 <RZA2_PINMUX(PE, 3, 7)>, /* RMII0_RXER */
+			 <RZA2_PINMUX(PE, 5, 1)>, /* ET0_MDC */
+			 <RZA2_PINMUX(PE, 6, 1)>, /* ET0_MDIO */
+			 <RZA2_PINMUX(PL, 0, 5)>; /* IRQ4 */
+	};
+
+	/* Ethernet - RMII mode */
+	/* Channel 1 */
+	eth1_pins: eth1 {
+		pinmux = <RZA2_PINMUX(PK, 3, 7)>, /* REF50CK1 */
+			 <RZA2_PINMUX(PK, 0, 7)>, /* RMMI1_TXDEN */
+			 <RZA2_PINMUX(PK, 1, 7)>, /* RMII1_TXD0 */
+			 <RZA2_PINMUX(PK, 2, 7)>, /* RMII1_TXD1 */
+			 <RZA2_PINMUX(P3, 2, 7)>, /* RMII1_CRSDV */
+			 <RZA2_PINMUX(PK, 4, 7)>, /* RMII1_RXD0 */
+			 <RZA2_PINMUX(P3, 5, 7)>, /* RMII1_RXD1 */
+			 <RZA2_PINMUX(P3, 1, 7)>, /* RMII1_RXER */
+			 <RZA2_PINMUX(P3, 3, 1)>, /* ET1_MDC */
+			 <RZA2_PINMUX(P3, 4, 1)>, /* ET1_MDIO */
+			 <RZA2_PINMUX(PL, 1, 5)>; /* IRQ5 */
+	};
+
+	/* IRQ3 (Touchscreen) */
+	irq3_pins: irq3 {
+		pinmux = <RZA2_PINMUX(P5, 7, 2)>;	/* IRQ3 */
+	};
+	
+	/* VDC LCD */
+	vdc6_pins: vdc6 {
+		pinmux =
+#if 1 /* Parallel Interface */
+			<RZA2_PINMUX(PF, 7, 3)>, // LCD0_DATA0
+			<RZA2_PINMUX(PH, 2, 3)>, // LCD0_DATA1
+			<RZA2_PINMUX(PF, 6, 3)>, // LCD0_DATA2
+			<RZA2_PINMUX(PF, 5, 3)>, // LCD0_DATA3
+			<RZA2_PINMUX(PF, 4, 3)>, // LCD0_DATA4
+			<RZA2_PINMUX(PF, 3, 3)>, // LCD0_DATA5
+			<RZA2_PINMUX(PF, 2, 3)>, // LCD0_DATA6
+			<RZA2_PINMUX(PF, 1, 3)>, // LCD0_DATA7
+			<RZA2_PINMUX(PF, 0, 3)>, // LCD0_DATA8
+			<RZA2_PINMUX(P8, 0, 3)>, // LCD0_DATA9
+			<RZA2_PINMUX(PA, 0, 3)>, // LCD0_DATA10
+			<RZA2_PINMUX(PA, 1, 3)>, // LCD0_DATA11
+			<RZA2_PINMUX(PA, 2, 3)>, // LCD0_DATA12
+			<RZA2_PINMUX(PA, 3, 3)>, // LCD0_DATA13
+			<RZA2_PINMUX(PA, 4, 3)>, // LCD0_DATA14
+			<RZA2_PINMUX(PA, 5, 3)>, // LCD0_DATA15
+			<RZA2_PINMUX(PA, 6, 3)>, // LCD0_DATA16
+			<RZA2_PINMUX(PA, 7, 3)>, // LCD0_DATA17
+			<RZA2_PINMUX(PB, 0, 3)>, // LCD0_DATA18
+			<RZA2_PINMUX(PB, 1, 3)>, // LCD0_DATA19
+			<RZA2_PINMUX(PB, 2, 3)>, // LCD0_DATA20
+			<RZA2_PINMUX(PB, 3, 3)>, // LCD0_DATA21
+			<RZA2_PINMUX(PB, 4, 3)>, // LCD0_DATA22
+			<RZA2_PINMUX(PB, 5, 3)>, // LCD0_DATA23
+			<RZA2_PINMUX(P7, 7, 3)>, // LCD0_TCON0
+			<RZA2_PINMUX(P7, 6, 3)>, // LCD0_TCON1
+		//	<RZA2_PINMUX(PC, 5, 5)>, // LCD0_TCON2	/* not used on this board */
+			<RZA2_PINMUX(PC, 4, 5)>, // LCD0_TCON3
+			<RZA2_PINMUX(PC, 3, 5)>, // LCD0_TCON4
+		//	<RZA2_PINMUX(PC, 2, 5)>, // LCD0_TCON5	/* not used on this board */
+		//	<RZA2_PINMUX(PC, 1, 5)>, // LCD0_TCON6	/* not used on this board */
+			<RZA2_PINMUX(PJ, 6, 3)>; // LCD0_CLK
+#else /* LVDS Interface  */
+			<RZA2_PINMUX(P4, 0, 2)>, // TXOUT0P
+			<RZA2_PINMUX(P4, 1, 2)>, // TXOUT0M
+			<RZA2_PINMUX(P4, 2, 2)>, // TXOUT1P
+			<RZA2_PINMUX(P4, 3, 2)>, // TXOUT1M
+			<RZA2_PINMUX(P4, 4, 2)>, // TXOUT2P
+			<RZA2_PINMUX(P4, 5, 2)>, // TXOUT2M
+			<RZA2_PINMUX(P4, 6, 2)>, // TXCLKOUTP
+			<RZA2_PINMUX(P4, 7, 2)>; // TXCLKOUTM
+#endif
+	};
+};
+
+/* Serial Console */
+&scif4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&scif4_pins>;
+
+	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
+	status = "okay";
+};
+
+&sdhi0 {
+        pinctrl-names = "default";
+	pinctrl-0 = <&sdhi0_pins>;
+        bus-width = <4>;
+        status = "okay";
+};
+
+&ether0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth0_pins>;
+	status = "okay";
+	renesas,no-ether-link;
+	phy-handle = <&phy0>;
+	phy0: ethernet-phy@0 {
+		reg = <0>;
+	};
+};
+
+&ether1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth1_pins>;
+	status = "okay";
+	renesas,no-ether-link;
+	phy-handle = <&phy1>;
+	phy1: ethernet-phy@1 {
+		reg = <0>;
+	};
+};
+
+/* RIIC3 (Touchscreen, EEPROM) */
+&i2c3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3_pins>;
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	ft5x06_ts@38 {
+		compatible = "focaltech,ft5x06";
+		reg = <0x38>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&irq3_pins>;
+		interrupts = <GIC_SPI (39-32) IRQ_TYPE_LEVEL_LOW>; /* IRQ3 */
+
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <480>;
+
+		/* The touchscreen on the RSK LCD is backwards for some reason */
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+	};
+
+	/* Renesas R1EX24128 EEPROM */
+	/* 'eeprom' will show up under:
+	 * /sys/bus/i2c/devices/3-0050/
+	 */
+        eeprom@50 {
+                compatible = "renesas,24c128", "atmel,24c128";
+                reg = <0x50>;
+                pagesize = <64>;
+        };
+};
+
+/* ========== LCD 24-bit Parallel Interface ========== */
+#if 1
+
+/* 800x480 RSK LCD - 24-bit Parallel Interface */
+
+/* Pacer TFT LCD Panel, Model gwp0700cnwv04 */
+#define XIP_KERNEL_WITHOUT_EXTERNAL_RAM 0
+#if XIP_KERNEL_WITHOUT_EXTERNAL_RAM
+  #define VDC6_BPP 16 /* 16bpp or 32bpp */
+  #define VDC6_FBSIZE (480*272*VDC6_BPP/8)	/* Emulated WQVGA screen */
+  #define VDC6_FB_ADDR 0	/* allocate memory at probe */
+#else
+  #define VDC6_BPP 16 /* 16bpp or 32bpp */
+  #define VDC6_FBSIZE (800*480*VDC6_BPP/8)
+  #define VDC6_FB_ADDR (0x80000000) /* fixed address in PAGE 0 */
+#endif
+
+/* VDC6 */
+/* RSK LCD: 800x600 LCD */
+/* Pacer TFT LCD Panel, Model gwp0700cnwv04 */
+/* Parallel IF */
+&vdc6 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc6_pins>;
+
+	display = <&display0>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC6_FB_ADDR>;
+	fb_phys_size = <VDC6_FBSIZE>;
+
+	panel_name = "gwp0700cnwv04";
+	panel_pixel_xres = <800>;	/* panel native resolution */
+	panel_pixel_yres = <480>;	/* panel native resolution */
+
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <3>;	/* 3=ICKSEL_P1CLK (Peripheral clock 1) */
+	panel_ocksel = <0>;	/* (don't care when lvds=0 ) */
+	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	use_lvds = <0>;		/* Set to 0 or 1 */
+
+	/* How are the TCON pins going to be used */
+	tcon_sel = <
+		0	/* TCON0:    0=TCON_SEL_STVA (VSYNC) */
+		0xff	/* TCON1: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON2: 0xff=TCON_SEL_UNUSED */
+		2	/* TCON3:    2=TCON_SEL_STH (HSYNC) */
+		7	/* TCON4:    7=TCON_SEL_DE (DATA ENABLE) */
+		0xff	/* TCON5: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON6: 0xff=TCON_SEL_UNUSED */
+		>;
+
+	display0: display0 {
+		bits-per-pixel = <VDC6_BPP>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33000000>; /* P1 clk / 2 */
+#if XIP_KERNEL_WITHOUT_EXTERNAL_RAM
+				hactive = <480>;
+				vactive = <272>;
+#else
+				hactive = <800>;
+				vactive = <480>;
+#endif
+				hback-porch = <26>;		/* back porch = 'HS Blanking'(46) - hsync-len(20) */
+				hfront-porch = <210>;		/* 'HS Front Porch (210)' */
+				vback-porch = <13>;		/* back porch = 'VS Blanking'(23) - vsync-len(10) */
+				vfront-porch = <22>;		/* 'VS Front Porch(22)' */
+				hsync-len = <20>;		/* pulse width of HSYNC (min=1, max=40) */
+				vsync-len = <10>;		/* pulse width of VSYNC (min=1, max=20) */
+				hsync-active = <1>; 		/* HSYNC pulse is: 0=Active LOW, 1=Active HIGH */
+				vsync-active = <1>; 		/* VSYNC pulse is: 0=Active LOW, 1=Active HIGH */
+				de-active = <0>; 		/* Data Enable signal is: 0=Active LOW , 1= Active HIGH */
+				pixelclk-active = <0>; 		/* Pixel Data clocked on: 0=Negative clock edge */
+			};
+		};
+	};
+};
+#endif /* Parallel LCD */
+
+
+/* ========== LCD LVDS Interface Example ========== */
+#if 0
+
+/* LVDS Panel: HSD070PWW1 -B01 | 1280x800 (WXVGA), 7", LVDS, 16bpp */
+/* LVDS IF */
+#define VDC6_BPP 16
+#define VDC6_FBSIZE (1280*800*VDC6_BPP/8)
+#define VDC6_FB_ADDR (0x80000000) /* fixed address in PAGE 0 */
+
+&vdc6 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc6_pins>;
+
+	display = <&display0>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC6_FB_ADDR>;
+	fb_phys_size = <VDC6_FBSIZE>;
+
+	panel_name = "HSD070PWW1";
+	panel_pixel_xres = <1280>;	/* panel native resolution */
+	panel_pixel_yres = <800>;	/* panel native resolution */
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <0>;	/* (don't care when lvds=1) */
+	panel_ocksel = <2>;	/* 2=OCKSEL_PLL_DIV7 (LVDS PLL clock divided by 7) */
+	out_format = <0>;	/* 0=OUT_FORMAT_RGB888 */
+	use_lvds = <1>;		/* Set to 0 or 1 */
+
+	/* How are the TCON pins going to be used */
+	tcon_sel = <
+		0xff	/* TCON0: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON1: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON2: 0xff=TCON_SEL_UNUSED */
+		7	/* TCON3:    7=TCON_SEL_DE (DATA ENABLE) */
+		0xff	/* TCON4: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON5: 0xff=TCON_SEL_UNUSED */
+		0xff	/* TCON6: 0xff=TCON_SEL_UNUSED */
+		>;
+
+	display0: display0 {
+		bits-per-pixel = <VDC6_BPP>;		/* Set to 16 or 32 */
+		bus-width = <16>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <71100000>; /* min:64.3MHz, typ:71.1MHz, max:82MHz */
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <16>;
+				hfront-porch = <16>;
+				vback-porch = <24>;
+				vfront-porch = <1>;
+				hsync-len = <136>; /* max */
+				vsync-len = <3>; /* max */
+				hsync-active = <1>; /* HIGH */
+				vsync-active = <1>; /* HIGH */
+				de-active = <0>; /* LOW */
+				pixelclk-active = <0>; /* ??? */
+			};
+		};
+	};
+};
+#endif /* LVDS */
+
+/* ========== SPI Flash MTD File System Example ========== */
+#if 0
+
+/* RSPI0 was tested by hooking up a SPI flash to DRP Header.
+ * SW6-2: ON (to enable RSPI pin on DRP header)
+ * Requires:
+ *   CONFIG_MTD=y
+ *   CONFIG_MTD_OF_PARTS=y
+ *   CONFIG_MTD_M25P80=y
+ *
+ * After boot:
+ * $ cat /proc/mtd
+ * dev:    size   erasesize  name
+ * mtd0: 00800000 04000000 "user"
+ * mtd1: 00400000 00010000 "spi-data1"
+ * mtd2: 00400000 00010000 "spi-data2"
+ *
+ * After that you should see some messages saying that your SPI flash has been
+ * detected.
+ * Then you can do things like erase and mount a JFFS2 file system:
+ * $ flash_eraseall -j /dev/mtd1
+ * $ mount -t jffs2 /dev/mtdblock1 /mnt
+ */
+&spi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins>;
+	status = "okay";
+
+	flash@0 {
+	/* 	compatible = "spansion,s25fl512s", "jedec,spi-nor"; */
+		compatible = "jedec,spi-nor";	/* let it auto-detect the flash */
+
+		reg = <0>;
+		spi-max-frequency = <100000>;
+
+		spi-cpol;
+		spi-cpha;
+
+		m25p,fast-read;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			partition@0 {
+				label = "spi-data1";
+				reg = <0x00000000 0x00400000>;
+				/* read-only; */
+			};
+			partition@40000 {
+				label = "spi-data2";
+				reg = <0x00400000 0x00400000>;
+			};
+		};
+	};
+};
+#endif
+
+/* ========== SPI EEPROM Example ========== */
+#if 0
+
+/* On early RZ/A2M Eval Board, a SPI EEPROM (R1EX25002ASA00G) was populated and
+ * connect to RSPI-0.
+ *
+ * In the kernel, enalbe CONFIG_EEPROM_AT25=y
+ *
+ * Will show up as /sys/class/spi_master/spi0/spi0.0/eeprom
+ * 
+ * Testing:
+ *  $ hexdump -C -n 16 /sys/class/spi_master/spi0/spi0.0/eeprom
+ *  $ echo hello > /sys/class/spi_master/spi0/spi0.0/eeprom
+ *  $ hexdump -C -n 16 /sys/class/spi_master/spi0/spi0.0/eeprom
+ */
+&spi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins>;
+	status = "okay";
+
+	eeprom@0 {
+		compatible = "atmel,at25";	/* generic name */
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+		/* SPI Mode 3 */
+		spi-cpol;
+		spi-cpha;
+
+		size = <256>;
+		pagesize = <16>;
+		address-width = <8>;
+	};
+};
+#endif
+
+
