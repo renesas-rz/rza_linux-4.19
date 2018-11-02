@@ -135,14 +135,18 @@ config ARCH_SH73A0
 	select ARCH_RMOBILE
 	select RENESAS_INTC_IRQPIN
 
-if ARCH_R7S72100
-comment "Renesas RZ/A1 Board Support"
+if ARCH_R7S72100 || ARCH_R7S9210
+comment "Renesas RZ/A Board Support"
 
 #--------------------------------------------
 # Renesas RZ/A Boards
 #--------------------------------------------
 config MACH_RSKRZA1
 	bool "RZ/A1 RSK board"
+	depends on ARCH_R7S72100
+config MACH_RZA2MEVB
+	bool "RZ/A2M Eval board"
+	depends on ARCH_R7S9210
 
 #--------------------------------------------
 # Custom RZ/A Boards
