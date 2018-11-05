@@ -20,6 +20,7 @@ obj-$(CONFIG_ARCH_R7S9210)	+= setup-r7s9210.o
 # Renesas RZ/A Boards
 #--------------------------------------------
 obj-$(CONFIG_MACH_RSKRZA1)	+= board-rskrza1.o
+obj-$(CONFIG_MACH_STREAMIT)	+= board-streamit.o
 obj-$(CONFIG_MACH_RZA2MEVB)	+= board-rza2mevb.o
 
 #--------------------------------------------

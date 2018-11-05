@@ -144,6 +144,11 @@ comment "Renesas RZ/A Board Support"
 config MACH_RSKRZA1
 	bool "RZ/A1 RSK board"
 	depends on ARCH_R7S72100
+
+config MACH_STREAMIT
+	depends on ARCH_R7S72100
+	bool "Stream it! board"
+
 config MACH_RZA2MEVB
 	bool "RZ/A2M Eval board"
 	depends on ARCH_R7S9210

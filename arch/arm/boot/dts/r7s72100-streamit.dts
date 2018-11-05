@@ -1,0 +1,561 @@
+/*
+ * Device Tree Source for the STREAMIT board
+ *
+ * Copyright (C) 2017 Renesas Electronics
+ *
+ * This file is dual-licensed: you can use it either under the terms
+ * of the GPL or the X11 license, at your option. Note that this dual
+ * licensing only applies to this file, and not this project as a
+ * whole.
+ *
+ *  a) This file is free software; you can redistribute it and/or
+ *     modify it under the terms of the GNU General Public License as
+ *     published by the Free Software Foundation; either version 2 of the
+ *     License, or (at your option) any later version.
+ *
+ *     This file is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ * Or, alternatively,
+ *
+ *  b) Permission is hereby granted, free of charge, to any person
+ *     obtaining a copy of this software and associated documentation
+ *     files (the "Software"), to deal in the Software without
+ *     restriction, including without limitation the rights to use,
+ *     copy, modify, merge, publish, distribute, sublicense, and/or
+ *     sell copies of the Software, and to permit persons to whom the
+ *     Software is furnished to do so, subject to the following
+ *     conditions:
+ *
+ *     The above copyright notice and this permission notice shall be
+ *     included in all copies or substantial portions of the Software.
+ *
+ *     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ *     OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+
+/dts-v1/;
+
+#define CONFIG_RZA1L	/* must be defined before including r7s72100.dtsi for RZ/A1L devices */
+#include "r7s72100.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/r7s72100-pinctrl.h>
+
+/ {
+	model = "STREAMIT";
+	compatible = "renesas,streamit", "renesas,r7s72100";
+
+	//no-heartbeat	/* Disables the LED heartbeat kernel thread */
+
+	aliases {
+		/* It is recommended to always map the serial console as /dev/ttySC0
+		 * in you system regardless of the actual SCIF channel used */
+		serial0 = &scif3;
+	};
+
+	chosen {
+		/* Keep extra spaces at the end in case you want to add additional command line options from u-boot */
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008800 rootfstype=axfs root=/dev/null rootflags=physaddr=0x18800000     ";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@0C000000 {
+		device_type = "memory";
+		reg = <0x0C000000 0x02000000>;	 /* 32Mbyte of External SDRAM on CS3 */
+	};
+
+	lbsc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+	};
+
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+
+		led0 {
+			gpios = <&port7 8 GPIO_ACTIVE_LOW>;
+		};
+	};
+
+#if 0
+	/* File System in XIP QSPI */
+	/* Remember, we'll be in QSPI XIP mode at this point */
+	/* Requires CONFIG_MTD_ROM=y */
+	qspi@18000000 {
+		compatible = "mtd-rom";
+		probe-type = "map_rom";
+		reg = <0x18000000 0x4000000>;	/* 64 MB*/
+		bank-width = <4>;
+		device-width = <1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@800000 {
+			label ="user";
+			reg = <0x0800000 0x800000>; /* 8MB @ 0x18800000 */
+			read-only;
+		};
+	};
+#endif
+};
+
+/* EXTAL (remove if not populated) */
+// The default jumpers are for the Stream it to boot using the USB clock
+//&extal_clk {
+//	clock-frequency = <13330000>;	/* 13.33MHz */
+//};
+
+&camera_clk {
+	clock-frequency = <27000000>;	/* 27MHz */
+};
+
+/* USB_X1 (remove if not populated) */
+&usb_x1_clk {
+	clock-frequency = <48000000>;	/* 48MHz */
+};
+
+/* RTC_X1 (remove if not populated) */
+&rtc_x1_clk {
+	clock-frequency = <32768>;
+};
+
+/* Define your pin settings here
+ *
+ * Please refer to tables 54.xx in the Hardware Manual for the correct
+ * 'Alternative Mode' number for each pin. Caution: Alt Mode numbers
+ * vary per pin and per device tyep (RZ/A1L,A1M,A1H)
+ *
+ * Syntax:
+ *    pinmux = <RZA1_PINMUX(Port, Pin, Alt Mode)>
+ *
+ * Example:
+ *    pinmux = <RZA1_PINMUX(3, 0, 6)>   /* P3_0 = TxD2 */
+/*
+ */
+&pinctrl {
+	compatible = "renesas,r7s72102-ports";	/* required only for RZ/A1L */
+
+	/* Serial Console */
+	scif3_pins: serial3 {
+		pinmux = <RZA1_PINMUX(7, 11, 5)>,	/* TxD3 */
+			 <RZA1_PINMUX(7, 10, 5)>;	/* TxD3 */
+	};
+
+	/* Ethernet Pins */
+	ether_pins: ether {
+		pinmux = <RZA1_PINMUX(8, 14, 2)>,	/* ET_COL   */
+			 <RZA1_PINMUX(9, 0, 2)>,	/* ET_MDC   */
+			 <RZA1_PINMUX(9, 1, 2)>,	/* ET_MDIO  */
+			 <RZA1_PINMUX(9, 2, 2)>,	/* ET_RXCLK */
+			 <RZA1_PINMUX(9, 3, 2)>,	/* ET_RXER  */
+			 <RZA1_PINMUX(9, 4, 2)>,	/* ET_RXDV  */
+			 <RZA1_PINMUX(8, 4, 2)>,	/* ET_TXCLK */
+			 <RZA1_PINMUX(8, 5, 2)>,	/* ET_TXER  */
+			 <RZA1_PINMUX(8, 6, 2)>,	/* ET_TXEN  */
+			 <RZA1_PINMUX(8, 15, 2)>,	/* ET_CRS   */
+			 <RZA1_PINMUX(8, 0, 2)>,	/* ET_TXD0  */
+			 <RZA1_PINMUX(8, 1, 2)>,	/* ET_TXD1  */
+			 <RZA1_PINMUX(8, 2, 2)>,	/* ET_TXD2  */
+			 <RZA1_PINMUX(8, 3, 2)>,	/* ET_TXD3  */
+			 <RZA1_PINMUX(8, 7, 2)>,	/* ET_RXD0  */
+			 <RZA1_PINMUX(8, 8, 2)>,	/* ET_RXD1  */
+			 <RZA1_PINMUX(8, 9, 2)>,	/* ET_RXD2  */
+			 <RZA1_PINMUX(8, 10, 2)>;	/* ET_RXD3  */
+	};
+
+
+	/* RIIC ch0 Pins (EEPROM) */
+	i2c0_pins: i2c0 {
+		pinmux = <RZA1_PINMUX(1, 0, 1)>,	/* RIIC0SCL */
+			 <RZA1_PINMUX(1, 1, 1)>;	/* RIIC0SDA */
+	};
+
+	/* RIIC ch1 Pins (Touchscreen) */
+	i2c1_pins: i2c1 {
+		pinmux = <RZA1_PINMUX(1, 2, 1)>,	/* RIIC1SCL */
+			 <RZA1_PINMUX(1, 3, 1)>;	/* RIIC1SDA */
+	};
+
+	/* IRQ3 (for Touchscreen) */
+	irq3_pins: irq3 {
+		pinmux = <RZA1_PINMUX(1, 11, 2)>;	/* IRQ3 */
+	};
+
+	/* VDC5 LCD ch 0 Pins */
+	vdc50_pins: vdc50 {
+		pinmux =
+			<RZA1_PINMUX(8, 0, 1)>,	/* LCD0_DATA0 */
+			<RZA1_PINMUX(8, 1, 1)>,	/* LCD0_DATA1 */
+			<RZA1_PINMUX(8, 2, 1)>,	/* LCD0_DATA2 */
+			<RZA1_PINMUX(8, 3, 1)>,	/* LCD0_DATA3 */
+			<RZA1_PINMUX(8, 4, 1)>,	/* LCD0_DATA4 */
+			<RZA1_PINMUX(8, 5, 1)>,	/* LCD0_DATA5 */
+			<RZA1_PINMUX(8, 6, 1)>,	/* LCD0_DATA6 */
+			<RZA1_PINMUX(8, 7, 1)>,	/* LCD0_DATA7 */
+
+			<RZA1_PINMUX(6, 0, 2)>,	/* LCD0_DATA8 */
+			<RZA1_PINMUX(6, 1, 2)>,	/* LCD0_DATA9 */
+			<RZA1_PINMUX(6, 2, 2)>,	/* LCD0_DATA10 */
+			<RZA1_PINMUX(6, 3, 2)>,	/* LCD0_DATA11 */
+			<RZA1_PINMUX(6, 4, 2)>,	/* LCD0_DATA12 */
+			<RZA1_PINMUX(6, 5, 2)>,	/* LCD0_DATA13 */
+			<RZA1_PINMUX(6, 6, 2)>,	/* LCD0_DATA14 */
+			<RZA1_PINMUX(6, 7, 2)>,	/* LCD0_DATA15 */
+
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA16 */
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA17 */
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA18 */
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA19 */
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA20 */
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA21 */
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA22 */
+			//<RZA1_PINMUX(, , )>,	/* LCD0_DATA23 */
+
+			/* TCON pins (some may not be used) */
+			//<RZA1_PINMUX(8, 8, 1)>,	/* LCD0_TCON0 */
+			//<RZA1_PINMUX(8 9, 1)>,	/* LCD0_TCON1 */
+			<RZA1_PINMUX(8, 10, 1)>,	/* LCD0_TCON2 */
+			<RZA1_PINMUX(8, 11, 1)>,	/* LCD0_TCON3 */
+			<RZA1_PINMUX(8, 12, 1)>,	/* LCD0_TCON4 */
+			//<RZA1_PINMUX(8, 13, 1)>,	/* LCD0_TCON5 */
+			//<RZA1_PINMUX(8, 14, 1)>,	/* LCD0_TCON6 */
+
+			<RZA1_PINMUX(7, 4, 6)>;	/* LCD0_CLK */
+	};
+
+	/* Audio ch 0 Pins */
+	audio_pins:  audio0 {
+		pinmux =
+			<RZA1_PINMUX(6, 8, 3)>,		/* SSISCK0 */
+			<RZA1_PINMUX(6, 9, 3)>,		/* SSIWS0 */
+			<RZA1_PINMUX(6, 10, 3)>,	/* SSITxD0 */
+			<RZA1_PINMUX(6, 11, 3)>;	/* SSIRxD0 */
+	};
+
+	/* CEU Camera Capture pins */
+	vio_pins: vio {
+		/* CEU pins: VIO_D[0-10], VIO_VD, VIO_HD, VIO_CLK */
+		pinmux = <RZA1_PINMUX(4, 0, 2)>, /* VIO_VD */
+			 <RZA1_PINMUX(4, 1, 2)>, /* VIO_HD */
+			 <RZA1_PINMUX(1, 4, 4)>, /* VIO_D0 */
+			 <RZA1_PINMUX(1, 5, 4)>, /* VIO_D1 */
+			 <RZA1_PINMUX(1, 6, 4)>, /* VIO_D2 */
+			 <RZA1_PINMUX(1, 7, 4)>, /* VIO_D3 */
+			 <RZA1_PINMUX(1, 12, 4)>, /* VIO_D4 */
+			 <RZA1_PINMUX(1, 13, 4)>, /* VIO_D5 */
+			 <RZA1_PINMUX(1, 14, 4)>, /* VIO_D6 */
+			 <RZA1_PINMUX(1, 15, 4)>, /* VIO_D7 */
+			 <RZA1_PINMUX(3, 14, 2)>; /* VIO_CLK */
+	};
+
+};
+
+/* High resolution System tick timers */
+&ostm0 {
+	status = "okay";
+};
+
+&ostm1 {
+	status = "okay";
+};
+
+/* The MTU2 system timer is not really needed if you are using the higher
+ * resolution OSTM timer */
+# if 0
+&mtu2 {
+	status = "okay";
+};
+#endif
+
+/* Real Time Clock */
+&rtc {
+	status = "okay";
+};
+
+/* Serial Console */
+&scif3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&scif3_pins>;
+	status = "okay";
+};
+
+/* Ethernet */
+&ether {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ether_pins>;
+	status = "okay";
+	renesas,no-ether-link;
+	phy-handle = <&phy0>;
+	phy0: ethernet-phy@0 {
+		reg = <0>;
+	};
+};
+
+&dma0  {
+			/*slave id for another device*/
+	slave_id=<	RZA1DMA_SLAVE_SDHI0_TX
+			RZA1DMA_SLAVE_SDHI0_RX
+			RZA1DMA_SLAVE_SDHI1_TX
+			RZA1DMA_SLAVE_SDHI1_RX
+			RZA1DMA_SLAVE_MMCIF_TX
+			RZA1DMA_SLAVE_MMCIF_RX
+			RZA1DMA_SLAVE_PCM_MEM_SSI0
+			RZA1DMA_SLAVE_PCM_MEM_SRC1
+			RZA1DMA_SLAVE_PCM_SSI0_MEM
+			RZA1DMA_SLAVE_PCM_SRC0_MEM>;
+		/* address of slave device*/
+	addr=<	0xe804e030 /*first for SDHI0_TX*/
+		0xe804e030
+		0xe804e830
+		0xe804e830
+		0xe804c834
+		0xe804c834
+		0xe820b018
+		0xe820970c
+		0xe820b01c
+		0xe8209718>;
+		/*channel config (chcfg) for slave device, first for SDHI0_TX*/
+	chcfg=<	0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0 /*.reqd .loen .hien .lvl .am .sds .dds .tm*/
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x1 0x0 0x1 0x1 0x1 0x1 0x1 0x0
+		0x0 0x0 0x1 0x1 0x1 0x2 0x2 0x0
+		0x0 0x0 0x1 0x1 0x1 0x1 0x1 0x0>;
+
+		/*dmas for slave device, first for SDHI0_TX*/
+	dmars=<	0x1 0x30	/*.rid .mid*/
+		0x2 0x30
+		0x1 0x31
+		0x2 0x31
+		0x1 0x32
+		0x2 0x32
+		0x1 0x38
+		0x1 0x41
+		0x2 0x38
+		0x2 0x40>;
+};
+
+/* USB Host ch0 */
+&usbhost0 {
+	status = "okay";
+	xtal-48mhz;
+};
+
+/* RIIC0 (EEPROM) */
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+	clock-frequency = <400000>;
+
+	/* CAT24C02 EEPROM */
+	/* 'eeprom' will show up under:
+	 * /sys/bus/i2c/devices/0-0050/
+	 */
+	at24@50 {
+		compatible = "at24,24c02";
+		pagesize = <16>;
+		reg = <0x50>;
+	};
+};
+
+/* RIIC1 (Touchscreen, Accelerometer) */
+&i2c1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_pins>;
+	status = "okay";
+	clock-frequency = <400000>;
+
+	/* Focaltech FT5x06 Capacitive Touch Panel Controller */
+	ft5x06_ts@38 {
+		compatible = "focaltech,ft5x06";
+		reg = <0x38>; /* I2C address = 0x38 */
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&irq3_pins>;
+		interrupts = <GIC_SPI (35-32) IRQ_TYPE_LEVEL_LOW>; /* IRQ3 */
+
+		touchscreen-size-x = <480>;
+		touchscreen-size-y = <272>;
+	};
+
+	/* Bosch  Digital, triaxial acceleration sensor */
+	/* Requries CONFIG_BMA180=y */
+	/* to read:
+	 * X axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_x_raw
+	 * Y axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_y_raw
+	 * Z axis: $ hexdump /sys/bus/iio/devices/iio:device0/in_accel_z_raw
+	 *   temp: $ hexdump /sys/bus/iio/devices/iio:device0/in_temp_raw
+	 */
+	bma250@18 {
+		compatible = "bosch,bma250";
+			reg = <0x18>;
+			//interrupts = <x x IRQ_TYPE_EDGE_RISING>;	/* not connected */
+	};
+
+	max9856: codec@10 {
+		compatible = "renesas,max9856_codec";
+		#sound-dai-cells = <0>;
+		reg = <0x10>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&audio_pins>;
+	};
+
+	ov7740: camera@21 {
+		compatible = "ovti,ov7740";
+		reg = <0x21>;
+
+		clocks = <&camera_clk>;
+		clock-names = "xvclk";
+		assigned-clocks = <&camera_clk>;
+		assigned-clock-rates = <27000000>;
+
+		port {
+			ov7740_out: endpoint {
+				remote-endpoint = <&ceu_in>;
+			};
+		};
+	};
+};
+
+/* LCD */
+#define VDC5_BPP 16 /* 16bpp or 32bpp */
+#define VDC5_FBSIZE (480*272*VDC5_BPP/8)
+//#define VDC5_FB_ADDR 0	/* 0 = allocate memory at probe (don't use when using SDRAM) */
+#define VDC5_FB_ADDR (0x60000000) /* fixed address in PAGE 0 */
+
+/* EastRising ER-TFT043-3 */
+/* OTA5180A 1440x544 System-On-Chip Driver for 480RGBx272 TFT LCD */
+&vdc50 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc50_pins>;
+
+	display = <&display0>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC5_FB_ADDR>;
+	fb_phys_size = <VDC5_FBSIZE>;
+
+	panel_name = "ER-TFT043-3";
+	panel_pixel_xres = <480>;	/* panel native resolution */
+	panel_pixel_yres = <272>;	/* panel native resolution */
+
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <3>;	/* 3=ICKSEL_P1CLK (Peripheral clock 1) */
+	panel_ocksel = <0>;	/* (don't care when lvds=0 ) */
+	out_format = <2>;	/* 0=RGB888, 1=RGB666, 2=RGB565 */
+	use_lvds = <0>;		/* Set to 0 or 1 */
+
+	/* Define how the TCON pins going to be used */
+	/* From file [ drivers/video/fbdev/renesas/vdc5fb.h ]
+	 * 0 = STVA/VS (VSYNC)
+	 * 1 = STVB/VE (Vertical Enable)
+	 * 2 = STH/SP/HS (HSYNC)
+	 * 3 = STB/LP/HE (Horizontal Enable)
+	 * 4 = CPV/GCK (Gate clock signal)
+	 * 5 = POLA (VCOM voltage polarity control signal)
+	 * 6 = POLB (VCOM voltage polarity control signal)
+	 * 7 = DE (Data Enable)
+	 * 0xff = pin not used */
+	tcon_sel = <
+		0xff	/* TCON0: */
+		0xff	/* TCON1: */
+		7	/* TCON2: DATA ENABLE */
+		2	/* TCON3: HSYNC */
+		0	/* TCON4: VSYNC */
+		0xff	/* TCON5: */
+		0xff	/* TCON6: */
+		>;
+
+	display0: display0 {
+		bits-per-pixel = <VDC5_BPP>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <10000000>; /* P1 clk / 2 (9.0MHz is the min, so pick 10MHz because it will round down) */
+				hactive = <480>;
+				vactive = <272>;
+				hback-porch = <47>;		/* H Blanking(88) - HSYNC width(41) */
+				hfront-porch = <8>;		/* H Front porch(8) */
+				vback-porch = <2>;		/* V Blanking(12) - VSYNC width(10) */
+				vfront-porch = <3>;		/* V Front Porch(3) */
+				hsync-len = <41>;		/* HSYNC width(41) */
+				vsync-len = <10>;		/* VSYNC width(10) */
+				hsync-active = <1>; /* HIGH */
+				vsync-active = <1>; /* HIGH */
+				de-active = <0>; /* LOW */
+				pixelclk-active = <0>; /* ??? */
+			};
+		};
+	};
+}; /* LCD end */
+
+/* Audio in/out */
+/* requires
+ * CONFIG_SOUND=y
+ * CONFIG_SND=y
+ * CONFIG_SND_SOC=y
+ * CONFIG_SND_SCUX_RSKRZA1=y
+ * CONFIG_RZA_DMA=y
+ */
+/ {
+	sound_machine: sound@0 {
+		compatible = "renesas,rskrza1_sound_alsa";
+	};
+
+	sound: scux-pcm-audio@e8208000 {
+		compatible = "renesas,rskrza1_scux";
+		reg = <0xe8208000 0x00001778>,
+		      <0xe820b000 0x00002830>;
+		channel = <0>;
+	};
+};
+
+/* Camera Capture */
+/* Requires the following to be enabled in the kernel:
+     CONFIG_MEDIA_SUPPORT=y
+     CONFIG_MEDIA_CAMERA_SUPPORT=y
+     CONFIG_V4L_PLATFORM_DRIVERS=y
+     CONFIG_VIDEO_RENESAS_CEU=y
+     CONFIG_MEDIA_CONTROLLER=y
+     CONFIG_VIDEO_V4L2_SUBDEV_API=y
+     CONFIG_MEDIA_SUBDRV_AUTOSELECT=n    (NOTE this is =n)
+     CONFIG_VIDEO_OV7740=y
+
+  The board must be modified 16MB before you can use this camera
+  interface.
+*/
+&ceu {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vio_pins>;
+	status = "okay";
+
+	port {
+		ceu_in: endpoint {
+			remote-endpoint = <&ov7740_out>;
+			hsync-active = <1>;
+			vsync-active = <0>;
+		};
+	};
+};
