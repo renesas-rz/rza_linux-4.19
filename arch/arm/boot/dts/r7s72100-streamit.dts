@@ -64,7 +64,7 @@
 
 	chosen {
 		/* Keep extra spaces at the end in case you want to add additional command line options from u-boot */
-		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008800 rootfstype=axfs root=/dev/null rootflags=physaddr=0x18800000     ";
+		bootargs = "ignore_loglevel earlyprintk earlycon rootfstype=axfs root=/dev/null rootflags=physaddr=0x18800000     ";
 		stdout-path = "serial0:115200n8";
 	};
 
