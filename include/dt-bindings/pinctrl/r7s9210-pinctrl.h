@@ -9,33 +9,33 @@
 #define RZA2_PINS_PER_PORT	8
 
 /* Port names as labeled in the Hardware Manual */
-#define P0 0
-#define P1 1
-#define P2 2
-#define P3 3
-#define P4 4
-#define P5 5
-#define P6 6
-#define P7 7
-#define P8 8
-#define P9 9
-#define PA 10
-#define PB 11
-#define PC 12
-#define PD 13
-#define PE 14
-#define PF 15
-#define PG 16
-#define PH 17
+#define PORT0 0
+#define PORT1 1
+#define PORT2 2
+#define PORT3 3
+#define PORT4 4
+#define PORT5 5
+#define PORT6 6
+#define PORT7 7
+#define PORT8 8
+#define PORT9 9
+#define PORTA 10
+#define PORTB 11
+#define PORTC 12
+#define PORTD 13
+#define PORTE 14
+#define PORTF 15
+#define PORTG 16
+#define PORTH 17
 /* No I */
-#define PJ 18
-#define PK 19
-#define PL 20
-#define PM 21
+#define PORTJ 18
+#define PORTK 19
+#define PORTL 20
+#define PORTM 21	/* Pins PM_0/1 are labeled JP_0/1 in HW manual */
 
 /*
  * Create the pin index from its bank and position numbers and store in
- * the upper 8 bits the alternate function identifier
+ * the upper 16 bits the alternate function identifier
  */
 #define RZA2_PINMUX(b, p, f)	((b) * RZA2_PINS_PER_PORT + (p) | (f << 16))
 
