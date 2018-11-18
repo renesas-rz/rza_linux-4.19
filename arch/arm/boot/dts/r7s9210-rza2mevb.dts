@@ -82,7 +82,7 @@
 		compatible = "gpio-leds";
 
 		led0 {
-			gpios = <&pinctrl RZA2_PIN(P6, 0) GPIO_ACTIVE_HIGH>;	/* P6_0 */
+			gpios = <&pinctrl RZA2_PIN(PORT6, 0) GPIO_ACTIVE_HIGH>;	/* P6_0 */
 		};
 	};
 #endif
@@ -138,112 +138,112 @@
 
 	/* Serial Console */
 	scif4_pins: serial4 {
-		pinmux = <RZA2_PINMUX(P9, 0, 4)>,	/* TxD4 */
-			 <RZA2_PINMUX(P9, 1, 4)>;	/* RxD4 */
+		pinmux = <RZA2_PINMUX(PORT9, 0, 4)>,	/* TxD4 */
+			 <RZA2_PINMUX(PORT9, 1, 4)>;	/* RxD4 */
 	};
-	
+
 	/* RIIC ch3 (Touchscreen, EEPROM) */
 	i2c3_pins: i2c3 {
-		pinmux = <RZA2_PINMUX(PD, 6, 1)>,	/* RIIC3SCL */
-			 <RZA2_PINMUX(PD, 7, 1)>;	/* RIIC3SDA */
+		pinmux = <RZA2_PINMUX(PORTD, 6, 1)>,	/* RIIC3SCL */
+			 <RZA2_PINMUX(PORTD, 7, 1)>;	/* RIIC3SDA */
 	};
 
 	/* RSPI ch3 (EEPROM) */
 	spi0_pins: spi0 {
-		pinmux = <RZA2_PINMUX(P8, 5, 4)>,	/* MISO0 */
-			 <RZA2_PINMUX(P8, 6, 4)>,	/* MOSI0 */
-			 <RZA2_PINMUX(P8, 7, 4)>,	/* CLK0 */
-			 <RZA2_PINMUX(P8, 4, 4)>;	/* SSL0 */
+		pinmux = <RZA2_PINMUX(PORT8, 5, 4)>,	/* MISO0 */
+			 <RZA2_PINMUX(PORT8, 6, 4)>,	/* MOSI0 */
+			 <RZA2_PINMUX(PORT8, 7, 4)>,	/* CLK0 */
+			 <RZA2_PINMUX(PORT8, 4, 4)>;	/* SSL0 */
 	};
 
 	/* SDHI 0 */
 	sdhi0_pins: sdhi0 {
-		pinmux = <RZA2_PINMUX(P5, 0, 3)>,	/* SD0_CD */
-			 <RZA2_PINMUX(P5, 1, 3)>;	/* SD0_WP */
+		pinmux = <RZA2_PINMUX(PORT5, 0, 3)>,	/* SD0_CD */
+			 <RZA2_PINMUX(PORT5, 1, 3)>;	/* SD0_WP */
 	};
 
 	/* Ethernet - RMII mode */
 	/* Channel 0 */
 	eth0_pins: eth0 {
-		pinmux = <RZA2_PINMUX(PE, 0, 7)>, /* REF50CK0 */
-			 <RZA2_PINMUX(P6, 1, 7)>, /* RMMI0_TXDEN */
-			 <RZA2_PINMUX(P6, 2, 7)>, /* RMII0_TXD0 */
-			 <RZA2_PINMUX(P6, 3, 7)>, /* RMII0_TXD1 */
-			 <RZA2_PINMUX(PE, 4, 7)>, /* RMII0_CRSDV */
-			 <RZA2_PINMUX(PE, 1, 7)>, /* RMII0_RXD0 */
-			 <RZA2_PINMUX(PE, 2, 7)>, /* RMII0_RXD1 */
-			 <RZA2_PINMUX(PE, 3, 7)>, /* RMII0_RXER */
-			 <RZA2_PINMUX(PE, 5, 1)>, /* ET0_MDC */
-			 <RZA2_PINMUX(PE, 6, 1)>, /* ET0_MDIO */
-			 <RZA2_PINMUX(PL, 0, 5)>; /* IRQ4 */
+		pinmux = <RZA2_PINMUX(PORTE, 0, 7)>, /* REF50CK0 */
+			 <RZA2_PINMUX(PORT6, 1, 7)>, /* RMMI0_TXDEN */
+			 <RZA2_PINMUX(PORT6, 2, 7)>, /* RMII0_TXD0 */
+			 <RZA2_PINMUX(PORT6, 3, 7)>, /* RMII0_TXD1 */
+			 <RZA2_PINMUX(PORTE, 4, 7)>, /* RMII0_CRSDV */
+			 <RZA2_PINMUX(PORTE, 1, 7)>, /* RMII0_RXD0 */
+			 <RZA2_PINMUX(PORTE, 2, 7)>, /* RMII0_RXD1 */
+			 <RZA2_PINMUX(PORTE, 3, 7)>, /* RMII0_RXER */
+			 <RZA2_PINMUX(PORTE, 5, 1)>, /* ET0_MDC */
+			 <RZA2_PINMUX(PORTE, 6, 1)>, /* ET0_MDIO */
+			 <RZA2_PINMUX(PORTL, 0, 5)>; /* IRQ4 */
 	};
 
 	/* Ethernet - RMII mode */
 	/* Channel 1 */
 	eth1_pins: eth1 {
-		pinmux = <RZA2_PINMUX(PK, 3, 7)>, /* REF50CK1 */
-			 <RZA2_PINMUX(PK, 0, 7)>, /* RMMI1_TXDEN */
-			 <RZA2_PINMUX(PK, 1, 7)>, /* RMII1_TXD0 */
-			 <RZA2_PINMUX(PK, 2, 7)>, /* RMII1_TXD1 */
-			 <RZA2_PINMUX(P3, 2, 7)>, /* RMII1_CRSDV */
-			 <RZA2_PINMUX(PK, 4, 7)>, /* RMII1_RXD0 */
-			 <RZA2_PINMUX(P3, 5, 7)>, /* RMII1_RXD1 */
-			 <RZA2_PINMUX(P3, 1, 7)>, /* RMII1_RXER */
-			 <RZA2_PINMUX(P3, 3, 1)>, /* ET1_MDC */
-			 <RZA2_PINMUX(P3, 4, 1)>, /* ET1_MDIO */
-			 <RZA2_PINMUX(PL, 1, 5)>; /* IRQ5 */
+		pinmux = <RZA2_PINMUX(PORTK, 3, 7)>, /* REF50CK1 */
+			 <RZA2_PINMUX(PORTK, 0, 7)>, /* RMMI1_TXDEN */
+			 <RZA2_PINMUX(PORTK, 1, 7)>, /* RMII1_TXD0 */
+			 <RZA2_PINMUX(PORTK, 2, 7)>, /* RMII1_TXD1 */
+			 <RZA2_PINMUX(PORT3, 2, 7)>, /* RMII1_CRSDV */
+			 <RZA2_PINMUX(PORTK, 4, 7)>, /* RMII1_RXD0 */
+			 <RZA2_PINMUX(PORT3, 5, 7)>, /* RMII1_RXD1 */
+			 <RZA2_PINMUX(PORT3, 1, 7)>, /* RMII1_RXER */
+			 <RZA2_PINMUX(PORT3, 3, 1)>, /* ET1_MDC */
+			 <RZA2_PINMUX(PORT3, 4, 1)>, /* ET1_MDIO */
+			 <RZA2_PINMUX(PORTL, 1, 5)>; /* IRQ5 */
 	};
 
 	/* IRQ3 (Touchscreen) */
 	irq3_pins: irq3 {
-		pinmux = <RZA2_PINMUX(P5, 7, 2)>;	/* IRQ3 */
+		pinmux = <RZA2_PINMUX(PORT5, 7, 2)>;	/* IRQ3 */
 	};
-	
+
 	/* VDC LCD */
 	vdc6_pins: vdc6 {
 		pinmux =
 #if 1 /* Parallel Interface */
-			<RZA2_PINMUX(PF, 7, 3)>, // LCD0_DATA0
-			<RZA2_PINMUX(PH, 2, 3)>, // LCD0_DATA1
-			<RZA2_PINMUX(PF, 6, 3)>, // LCD0_DATA2
-			<RZA2_PINMUX(PF, 5, 3)>, // LCD0_DATA3
-			<RZA2_PINMUX(PF, 4, 3)>, // LCD0_DATA4
-			<RZA2_PINMUX(PF, 3, 3)>, // LCD0_DATA5
-			<RZA2_PINMUX(PF, 2, 3)>, // LCD0_DATA6
-			<RZA2_PINMUX(PF, 1, 3)>, // LCD0_DATA7
-			<RZA2_PINMUX(PF, 0, 3)>, // LCD0_DATA8
-			<RZA2_PINMUX(P8, 0, 3)>, // LCD0_DATA9
-			<RZA2_PINMUX(PA, 0, 3)>, // LCD0_DATA10
-			<RZA2_PINMUX(PA, 1, 3)>, // LCD0_DATA11
-			<RZA2_PINMUX(PA, 2, 3)>, // LCD0_DATA12
-			<RZA2_PINMUX(PA, 3, 3)>, // LCD0_DATA13
-			<RZA2_PINMUX(PA, 4, 3)>, // LCD0_DATA14
-			<RZA2_PINMUX(PA, 5, 3)>, // LCD0_DATA15
-			<RZA2_PINMUX(PA, 6, 3)>, // LCD0_DATA16
-			<RZA2_PINMUX(PA, 7, 3)>, // LCD0_DATA17
-			<RZA2_PINMUX(PB, 0, 3)>, // LCD0_DATA18
-			<RZA2_PINMUX(PB, 1, 3)>, // LCD0_DATA19
-			<RZA2_PINMUX(PB, 2, 3)>, // LCD0_DATA20
-			<RZA2_PINMUX(PB, 3, 3)>, // LCD0_DATA21
-			<RZA2_PINMUX(PB, 4, 3)>, // LCD0_DATA22
-			<RZA2_PINMUX(PB, 5, 3)>, // LCD0_DATA23
-			<RZA2_PINMUX(P7, 7, 3)>, // LCD0_TCON0
-			<RZA2_PINMUX(P7, 6, 3)>, // LCD0_TCON1
-		//	<RZA2_PINMUX(PC, 5, 5)>, // LCD0_TCON2	/* not used on this board */
-			<RZA2_PINMUX(PC, 4, 5)>, // LCD0_TCON3
-			<RZA2_PINMUX(PC, 3, 5)>, // LCD0_TCON4
-		//	<RZA2_PINMUX(PC, 2, 5)>, // LCD0_TCON5	/* not used on this board */
-		//	<RZA2_PINMUX(PC, 1, 5)>, // LCD0_TCON6	/* not used on this board */
-			<RZA2_PINMUX(PJ, 6, 3)>; // LCD0_CLK
+			<RZA2_PINMUX(PORTF, 7, 3)>, // LCD0_DATA0
+			<RZA2_PINMUX(PORTH, 2, 3)>, // LCD0_DATA1
+			<RZA2_PINMUX(PORTF, 6, 3)>, // LCD0_DATA2
+			<RZA2_PINMUX(PORTF, 5, 3)>, // LCD0_DATA3
+			<RZA2_PINMUX(PORTF, 4, 3)>, // LCD0_DATA4
+			<RZA2_PINMUX(PORTF, 3, 3)>, // LCD0_DATA5
+			<RZA2_PINMUX(PORTF, 2, 3)>, // LCD0_DATA6
+			<RZA2_PINMUX(PORTF, 1, 3)>, // LCD0_DATA7
+			<RZA2_PINMUX(PORTF, 0, 3)>, // LCD0_DATA8
+			<RZA2_PINMUX(PORT8, 0, 3)>, // LCD0_DATA9
+			<RZA2_PINMUX(PORTA, 0, 3)>, // LCD0_DATA10
+			<RZA2_PINMUX(PORTA, 1, 3)>, // LCD0_DATA11
+			<RZA2_PINMUX(PORTA, 2, 3)>, // LCD0_DATA12
+			<RZA2_PINMUX(PORTA, 3, 3)>, // LCD0_DATA13
+			<RZA2_PINMUX(PORTA, 4, 3)>, // LCD0_DATA14
+			<RZA2_PINMUX(PORTA, 5, 3)>, // LCD0_DATA15
+			<RZA2_PINMUX(PORTA, 6, 3)>, // LCD0_DATA16
+			<RZA2_PINMUX(PORTA, 7, 3)>, // LCD0_DATA17
+			<RZA2_PINMUX(PORTB, 0, 3)>, // LCD0_DATA18
+			<RZA2_PINMUX(PORTB, 1, 3)>, // LCD0_DATA19
+			<RZA2_PINMUX(PORTB, 2, 3)>, // LCD0_DATA20
+			<RZA2_PINMUX(PORTB, 3, 3)>, // LCD0_DATA21
+			<RZA2_PINMUX(PORTB, 4, 3)>, // LCD0_DATA22
+			<RZA2_PINMUX(PORTB, 5, 3)>, // LCD0_DATA23
+			<RZA2_PINMUX(PORT7, 7, 3)>, // LCD0_TCON0
+			<RZA2_PINMUX(PORT7, 6, 3)>, // LCD0_TCON1
+		//	<RZA2_PINMUX(PORTC, 5, 5)>, // LCD0_TCON2	/* not used on this board */
+			<RZA2_PINMUX(PORTC, 4, 5)>, // LCD0_TCON3
+			<RZA2_PINMUX(PORTC, 3, 5)>, // LCD0_TCON4
+		//	<RZA2_PINMUX(PORTC, 2, 5)>, // LCD0_TCON5	/* not used on this board */
+		//	<RZA2_PINMUX(PORTC, 1, 5)>, // LCD0_TCON6	/* not used on this board */
+			<RZA2_PINMUX(PORTJ, 6, 3)>; // LCD0_CLK
 #else /* LVDS Interface  */
-			<RZA2_PINMUX(P4, 0, 2)>, // TXOUT0P
-			<RZA2_PINMUX(P4, 1, 2)>, // TXOUT0M
-			<RZA2_PINMUX(P4, 2, 2)>, // TXOUT1P
-			<RZA2_PINMUX(P4, 3, 2)>, // TXOUT1M
-			<RZA2_PINMUX(P4, 4, 2)>, // TXOUT2P
-			<RZA2_PINMUX(P4, 5, 2)>, // TXOUT2M
-			<RZA2_PINMUX(P4, 6, 2)>, // TXCLKOUTP
-			<RZA2_PINMUX(P4, 7, 2)>; // TXCLKOUTM
+			<RZA2_PINMUX(PORT4, 0, 2)>, // TXOUT0P
+			<RZA2_PINMUX(PORT4, 1, 2)>, // TXOUT0M
+			<RZA2_PINMUX(PORT4, 2, 2)>, // TXOUT1P
+			<RZA2_PINMUX(PORT4, 3, 2)>, // TXOUT1M
+			<RZA2_PINMUX(PORT4, 4, 2)>, // TXOUT2P
+			<RZA2_PINMUX(PORT4, 5, 2)>, // TXOUT2M
+			<RZA2_PINMUX(PORT4, 6, 2)>, // TXCLKOUTP
+			<RZA2_PINMUX(PORT4, 7, 2)>; // TXCLKOUTM
 #endif
 	};
 };
@@ -544,7 +544,7 @@
  * In the kernel, enalbe CONFIG_EEPROM_AT25=y
  *
  * Will show up as /sys/class/spi_master/spi0/spi0.0/eeprom
- * 
+ *
  * Testing:
  *  $ hexdump -C -n 16 /sys/class/spi_master/spi0/spi0.0/eeprom
  *  $ echo hello > /sys/class/spi_master/spi0/spi0.0/eeprom
