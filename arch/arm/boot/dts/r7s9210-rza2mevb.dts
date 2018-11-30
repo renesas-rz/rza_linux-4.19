@@ -262,6 +262,7 @@
 	pinctrl-0 = <&sdhi0_pins>;
         bus-width = <4>;
         status = "okay";
+	disable-wp;
 };
 
 &ether0 {
