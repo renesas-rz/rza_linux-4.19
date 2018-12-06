@@ -537,7 +537,7 @@
 #endif
 
 /* ========== SPI EEPROM Example ========== */
-#if 0
+#if 1
 
 /* On early RZ/A2M Eval Board, a SPI EEPROM (R1EX25002ASA00G) was populated and
  * connect to RSPI-0.
@@ -554,6 +554,9 @@
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0_pins>;
+	dmas = 	<&dma0 RZADMA_SLAVE_RSPI0_TX>,
+			<&dma0 RZADMA_SLAVE_RSPI0_RX>;
+	dma-names = "tx", "rx";
 	status = "okay";
 
 	eeprom@0 {
@@ -571,4 +574,18 @@
 };
 #endif
 
+&dma0  {
+		/*slave id for another device*/
+	slave_id=< RZADMA_SLAVE_RSPI0_TX
+			   RZADMA_SLAVE_RSPI0_RX>;	
+		/* address of slave device*/
+	addr=< 0xe800c804
+		   0xe800c804>;
+		/*channel config (chcfg) for slave device, first for RSPI0_TX*/
+	chcfg=<	0x1 0x0 0x1 0x1 0x2 0x0 0x0 0x0	/*.reqd .loen .hien .lvl .am .sds .dds .tm*/
+			0x0 0x0 0x1 0x1 0x2 0x0 0x0 0x0>;
+		/*dmas for slave device, first for RSPI0_TX*/
+	dmars=<	0x1 0xb5 /*.rid .mid*/
+			0x2 0xb5>;
+};
 
