@@ -66,6 +66,8 @@ enum {
 	RZADMA_SLAVE_SDHI1_RX,
 	RZADMA_SLAVE_MMCIF_TX,
 	RZADMA_SLAVE_MMCIF_RX,
+	RZADMA_SLAVE_RSPI0_TX,			/*Slave of RZ/A2M*/
+	RZADMA_SLAVE_RSPI0_RX,			/*Slave of RZ/A2M*/
 };
 
 union chcfg_reg {
@@ -91,8 +93,13 @@ union dmars_reg {
 	u32 v;
 	struct {
 		u32 rid:   2;	/* LSB */
+#ifdef CONFIG_ARCH_R7S9210		/*Configration for RZ/A2M*/
+		u32 mid:   8;
+		u32 _mbz0:22;
+#else
 		u32 mid:   7;
 		u32 _mbz0:23;
+#endif
 	};
 };
 
