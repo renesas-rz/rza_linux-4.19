@@ -453,7 +453,9 @@ static int rspi_wait_for_interrupt(struct rspi_data *rspi, u8 wait_mask,
 		return 0;
 
 	rspi_enable_irq(rspi, enable_bit);
-	ret = wait_event_timeout(rspi->wait, rspi->spsr & wait_mask, HZ);
+
+	/*We should re-read value of interrupt status register in amount of time (1ms) before decide timeout.*/
+	ret = wait_event_timeout(rspi->wait, rspi_read8(rspi, RSPI_SPSR) & wait_mask, 1);
 	if (ret == 0 && !(rspi->spsr & wait_mask))
 		return -ETIMEDOUT;
 
