@@ -47,6 +47,7 @@ struct vdc5fb_priv {
 	struct vdc5fb_pdata *pdata;
 	const char *dev_name;
 	struct fb_videomode *videomode;	/* current */
+	struct fb_videomode videomode_copy;	/* local copy */
 	/* clock */
 	struct clk *clk;
 	/* framebuffers */
@@ -1163,6 +1164,13 @@ static void vdc5fb_set_videomode(struct vdc5fb_priv *priv,
 		mode = new;
 	priv->videomode = mode;
 
+	/* Make a copy of the videomode struct (this one is only temporary).
+	 * We need this when we want modify the VDC layers manually, but need
+	 * to refer back to the info in this structure */
+	priv->videomode_copy = *priv->videomode;
+	/* switch our pointer to our local copy */
+	priv->videomode = &(priv->videomode_copy);
+
 	if (priv->info->screen_base)	/* sanity check */
 		vdc5fb_clear_fb(priv);
 
@@ -1681,6 +1689,158 @@ struct vdc5fb_pdata *vdc5fb_parse_dt(struct platform_device *pdev)
 	return pdata;
 }
 
+
+/************************* sysfs attribute files ************************/
+/* These sysfs files will show up under:
+	RZA1: ch0 = /sys/devices/platform/fcff7400.display/
+	      ch1 = /sys/devices/platform/fcff9400.display/
+	RZA2: ch0 = /sys/devices/platform/fcff7400.display/
+*/
+const char format_names[11][10] = {
+	"RGB565",
+	"RGB888",
+	"ARGB1555",
+	"ARGB4444",
+	"ARGB8888",
+	"CLUT8",
+	"CLUT4",
+	"CLUT1",
+	"YCbCr422",
+	"YCbCr444",
+	"RGBA5551",
+};
+
+static ssize_t vdc5fb_show_layer(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct vdc5fb_priv *priv = dev_get_drvdata(dev);
+	int layer = attr->attr.name[5] - '0';
+	int count = 0;
+
+	count += sprintf(buf + count, "xres = %u\n", priv->pdata->layers[layer].xres);
+	count += sprintf(buf + count, "yres = %u\n", priv->pdata->layers[layer].yres);
+	count += sprintf(buf + count, "x_offset = %u\n", priv->pdata->layers[layer].x_offset);
+	count += sprintf(buf + count, "y_offset = %u\n", priv->pdata->layers[layer].y_offset);
+	count += sprintf(buf + count, "base = 0x%08X\n", priv->pdata->layers[layer].base);
+	count += sprintf(buf + count, "bpp = %u\n", priv->pdata->layers[layer].bpp);
+	count += sprintf(buf + count, "format = %s\n", format_names[priv->pdata->layers[layer].format >> 28]);
+	count += sprintf(buf + count, "blend = %u\n", priv->pdata->layers[layer].blend);
+
+	/* Return the number characters (bytes) copied to the buffer */
+	return count;
+}
+
+#define CHARS_TO_HEX(a,b) (a<<8 | b)
+static ssize_t vdc5fb_store_layer(struct device *dev,
+		struct device_attribute *attr, const char *buf,
+		size_t count)
+{
+	struct vdc5fb_priv *priv = dev_get_drvdata(dev);
+	int layer = attr->attr.name[5] - '0';
+	int i, j;
+	char val_name[20] = {0};
+	u16 next_value;
+	int found = 0;
+	int find_next = 0;
+	u32 gr_format;
+	char new_format[10];
+
+	for (i=0; i < count; i++) {
+		// Find next value to scan
+		if (find_next) {
+			// Advance to next item (line or comma separated)
+			if ((buf[i] == '\n') || (buf[i] == ','))
+				find_next = 0;
+
+			continue;
+		}
+
+		// Remove any leading white spaces or blank lines
+		if ((buf[i] == ' ') || (buf[i] == '\t') || (buf[i] == '\n') || (buf[i] == '\r'))
+			continue;
+
+		// Use first 2 characters to determine the value name.
+		// Convert it to a 16-bit value so we can use switch-case
+		next_value = CHARS_TO_HEX(buf[i], buf[i+1]);
+
+		switch (next_value) {
+
+		case CHARS_TO_HEX('x','r'):	//u32 xres;
+			found = sscanf(buf + i, "%s = %u", val_name, &(priv->pdata->layers[layer].xres));
+			break;
+		case CHARS_TO_HEX('y','r'):	//u32 yres;
+			found = sscanf(buf + i, "%s = %u", val_name, &(priv->pdata->layers[layer].yres));
+			break;
+		case CHARS_TO_HEX('x','_'):	//u32 x_offset;
+			found = sscanf(buf + i, "%s = %u", val_name, &(priv->pdata->layers[layer].x_offset));
+			break;
+		case CHARS_TO_HEX('y','_'):	//u32 y_offset;
+			found = sscanf(buf + i, "%s = %u", val_name, &(priv->pdata->layers[layer].y_offset));
+			break;
+		case CHARS_TO_HEX('b','a'):	//u32 base;
+			found = sscanf(buf + i, "%s = %x", val_name, &(priv->pdata->layers[layer].base));
+			break;
+		case CHARS_TO_HEX('b','p'):	//u32 bpp;
+			found = sscanf(buf + i, "%s = %u", val_name, &(priv->pdata->layers[layer].bpp));
+			break;
+		case CHARS_TO_HEX('f','o'):	//u32 format;
+			// passed in as a string
+			found = sscanf(buf + i, "%s = %s", val_name, new_format);
+			gr_format = 0xFF;
+			for (j=0; j<10; j++) {
+				if (!strcmp(new_format, format_names[j])) {
+					gr_format = j;
+					break;
+				}
+			}
+			if (gr_format == 0xFF) {
+				printk("[ERROR] Unknown format: %s\n", new_format);
+				return count;
+			}
+			if (gr_format == GR_FORMAT_RGB565)
+				priv->pdata->layers[layer].format = GR_FORMAT(GR_FORMAT_RGB565) | GR_RDSWA(6);
+			else if (gr_format == GR_FORMAT_RGB565)
+				priv->pdata->layers[layer].format = GR_FORMAT(GR_FORMAT_ARGB8888) | GR_RDSWA(4);
+			else
+				priv->pdata->layers[layer].format = GR_FORMAT(gr_format);
+			break;
+		case CHARS_TO_HEX('b','l'):	//u32 blend;
+			found = sscanf(buf + i, "%s = %u", val_name, &(priv->pdata->layers[layer].blend));
+			break;
+		default:
+			printk("[ERROR] Bad parameter passed staring at: %s\n",buf + i);
+			break;
+		}
+
+		if (found != 2) {
+			printk("[ERROR] Bad parameter passed: \"%s\"\n",val_name);
+			return count;
+		}
+
+		find_next = 1;
+	}
+
+	/* Reinitialize all layers */
+	vdc5fb_init_scalers(priv);
+	vdc5fb_init_graphics(priv);
+	vdc5fb_update_all(priv);
+
+	/* Return the number of characters (bytes) we used from the buffer */
+	return count;
+}
+
+static struct device_attribute vdc5fb_device_attributes[] = {
+	__ATTR(	layer0, 			/* the name of the virtual file will appear as */
+		0644, 				/* Virtual file permissions */
+		vdc5fb_show_layer,		/* file read handler */
+		vdc5fb_store_layer),		/* file write handler */
+#ifdef VDC5
+	__ATTR(layer1, 0644, vdc5fb_show_layer, vdc5fb_store_layer),
+#endif
+	__ATTR(layer2, 0644, vdc5fb_show_layer, vdc5fb_store_layer),
+	__ATTR(layer3, 0644, vdc5fb_show_layer, vdc5fb_store_layer),
+};
+
 static int vdc5fb_probe(struct platform_device *pdev)
 {
 	int error = -EINVAL;
@@ -1693,6 +1853,7 @@ static int vdc5fb_probe(struct platform_device *pdev)
 	struct device_node *np;
 	int ret;
 	u32 bpp;
+	int i;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
@@ -1954,6 +2115,15 @@ static int vdc5fb_probe(struct platform_device *pdev)
 	error = register_framebuffer(info);
 	if (error < 0)
 		goto error;
+
+	/* Add our sysfs interface virtual files to the system */
+	for (i = 0; i < ARRAY_SIZE(vdc5fb_device_attributes); i++) {
+		ret = device_create_file(&(pdev->dev), &vdc5fb_device_attributes[i]);
+		if (ret < 0) {
+			printk(KERN_ERR "device_create_file error\n");
+			break;
+		}
+	}
 
 	dev_info(info->dev,
 		"registered %s as %ux%u @ %u Hz, %d bpp.\n",
