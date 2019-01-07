@@ -1696,7 +1696,7 @@ struct vdc5fb_pdata *vdc5fb_parse_dt(struct platform_device *pdev)
 	      ch1 = /sys/devices/platform/fcff9400.display/
 	RZA2: ch0 = /sys/devices/platform/fcff7400.display/
 */
-const char format_names[11][10] = {
+const char format_names[24][12] = {
 	"RGB565",
 	"RGB888",
 	"ARGB1555",
@@ -1705,9 +1705,33 @@ const char format_names[11][10] = {
 	"CLUT8",
 	"CLUT4",
 	"CLUT1",
-	"YCbCr422",
+	"YCbCr422",	// GR0_YCC_SWAP=0: Cb/Y0/Cr/Y1
 	"YCbCr444",
 	"RGBA5551",
+	"RGBA8888",
+	"prohibited",
+	"prohibited",
+	"prohibited",
+	"prohibited",
+	"YCbCr422_0",	// GR0_YCC_SWAP=0: Cb/Y0/Cr/Y1
+	"YCbCr422_1",	// GR0_YCC_SWAP=1: Y0/Cb/Y1/Cr
+	"YCbCr422_2",	// GR0_YCC_SWAP=2: Cr/Y0/Cb/Y1
+	"YCbCr422_3",	// GR0_YCC_SWAP=3: Y0/Cr/Y1/Cb
+	"YCbCr422_4",	// GR0_YCC_SWAP=4: Y1/Cr/Y0/Cb
+	"YCbCr422_5",	// GR0_YCC_SWAP=5: Cr/Y1/Cb/Y0
+	"YCbCr422_6",	// GR0_YCC_SWAP=6: Y1/Cb/Y0/Cr
+	"YCbCr422_7",	// GR0_YCC_SWAP=7: Cb/Y1/Cr/Y0
+};
+
+const char readswap_names[8][14] = {
+	"no_swap",
+	"swap_8",
+	"swap_16",
+	"swap_16_8",
+	"swap_32",
+	"swap_32_8",
+	"swap_32_16",
+	"swap_32_16_8",
 };
 
 static ssize_t vdc5fb_show_layer(struct device *dev,
@@ -1716,6 +1740,7 @@ static ssize_t vdc5fb_show_layer(struct device *dev,
 	struct vdc5fb_priv *priv = dev_get_drvdata(dev);
 	int layer = attr->attr.name[5] - '0';
 	int count = 0;
+	u32 gr_flm6;
 
 	count += sprintf(buf + count, "xres = %u\n", priv->pdata->layers[layer].xres);
 	count += sprintf(buf + count, "yres = %u\n", priv->pdata->layers[layer].yres);
@@ -1723,7 +1748,17 @@ static ssize_t vdc5fb_show_layer(struct device *dev,
 	count += sprintf(buf + count, "y_offset = %u\n", priv->pdata->layers[layer].y_offset);
 	count += sprintf(buf + count, "base = 0x%08X\n", priv->pdata->layers[layer].base);
 	count += sprintf(buf + count, "bpp = %u\n", priv->pdata->layers[layer].bpp);
-	count += sprintf(buf + count, "format = %s\n", format_names[priv->pdata->layers[layer].format >> 28]);
+
+	gr_flm6 = priv->pdata->layers[layer].format;
+	if ((gr_flm6 >> 28) == GR_FORMAT_YCbCr422)
+		gr_flm6 = 16 + ((gr_flm6 >> 13) & 0x7);	// also look at GR_YCC_SWAP[2:0]
+	else
+		gr_flm6 = gr_flm6 >> 28;
+	count += sprintf(buf + count, "format = %s\n", format_names[gr_flm6]);
+
+	gr_flm6 = (priv->pdata->layers[layer].format >> 10) & 7;
+	count += sprintf(buf + count, "read_swap = %s\n", readswap_names[gr_flm6]);
+
 	count += sprintf(buf + count, "blend = %u\n", priv->pdata->layers[layer].blend);
 
 	/* Return the number characters (bytes) copied to the buffer */
@@ -1743,7 +1778,8 @@ static ssize_t vdc5fb_store_layer(struct device *dev,
 	int found = 0;
 	int find_next = 0;
 	u32 gr_format;
-	char new_format[10];
+	u32 gr_rdswa;
+	char new_format[14];
 
 	for (i=0; i < count; i++) {
 		// Find next value to scan
@@ -1787,7 +1823,7 @@ static ssize_t vdc5fb_store_layer(struct device *dev,
 			// passed in as a string
 			found = sscanf(buf + i, "%s = %s", val_name, new_format);
 			gr_format = 0xFF;
-			for (j=0; j<10; j++) {
+			for (j=0; j<24; j++) {
 				if (!strcmp(new_format, format_names[j])) {
 					gr_format = j;
 					break;
@@ -1799,10 +1835,30 @@ static ssize_t vdc5fb_store_layer(struct device *dev,
 			}
 			if (gr_format == GR_FORMAT_RGB565)
 				priv->pdata->layers[layer].format = GR_FORMAT(GR_FORMAT_RGB565) | GR_RDSWA(6);
-			else if (gr_format == GR_FORMAT_RGB565)
+			else if (gr_format == GR_FORMAT_ARGB8888)
 				priv->pdata->layers[layer].format = GR_FORMAT(GR_FORMAT_ARGB8888) | GR_RDSWA(4);
+			else if (gr_format >= 16)	// add in GR_YCC_SWAP
+				priv->pdata->layers[layer].format = GR_FORMAT(GR_FORMAT_YCbCr422) | GR_YCC_SWAP(gr_format - 16);
 			else
 				priv->pdata->layers[layer].format = GR_FORMAT(gr_format);
+			break;
+		case CHARS_TO_HEX('r','e'):	// read_swap (part of 'fromat)
+			// passed in as a string
+			found = sscanf(buf + i, "%s = %s", val_name, new_format);
+			gr_rdswa = 0xFF;
+			for (j=0; j<8; j++) {
+				if (!strcmp(new_format, readswap_names[j])) {
+					gr_rdswa = j;
+					break;
+				}
+			}
+			if (gr_rdswa == 0xFF) {
+				printk("[ERROR] Unknown read_swap: %s\n", new_format);
+				return count;
+			}
+			// Just change the GR_RDSWA bits
+			priv->pdata->layers[layer].format &= 0xFFFFE3FF;
+			priv->pdata->layers[layer].format |= GR_RDSWA(gr_rdswa);
 			break;
 		case CHARS_TO_HEX('b','l'):	//u32 blend;
 			found = sscanf(buf + i, "%s = %u", val_name, &(priv->pdata->layers[layer].blend));
