@@ -37,6 +37,7 @@
 #define USB2_VBCTRL		0x60c
 #define USB2_LINECTRL1		0x610
 #define USB2_ADPCTRL		0x630
+#define USB2_PHYCLK_CTRL	0x644
 
 /* INT_ENABLE */
 #define USB2_INT_ENABLE_UCOM_INTEN	BIT(3)
@@ -91,6 +92,7 @@ struct rcar_gen3_chan {
 	struct work_struct work;
 	bool extcon_host;
 	bool has_otg_pins;
+	bool uses_usb_x1;
 };
 
 static void rcar_gen3_phy_usb2_work(struct work_struct *work)
@@ -308,6 +310,9 @@ static int rcar_gen3_phy_usb2_init(struct phy *p)
 	struct rcar_gen3_chan *channel = phy_get_drvdata(p);
 	void __iomem *usb2_base = channel->base;
 
+	if (channel->uses_usb_x1)
+		writel(0x00000001, usb2_base + USB2_PHYCLK_CTRL);
+
 	/* Initialize USB2 part */
 	writel(USB2_INT_ENABLE_INIT, usb2_base + USB2_INT_ENABLE);
 	writel(USB2_SPD_RSM_TIMSET_INIT, usb2_base + USB2_SPD_RSM_TIMSET);
@@ -316,6 +321,9 @@ static int rcar_gen3_phy_usb2_init(struct phy *p)
 	/* Initialize otg part */
 	if (channel->has_otg_pins)
 		rcar_gen3_init_otg(channel);
+	else
+		/* No otg, so default to host mode */
+		writel(0x00000000, usb2_base + USB2_COMMCTRL);
 
 	return 0;
 }
@@ -389,6 +397,9 @@ static irqreturn_t rcar_gen3_phy_usb2_irq(int irq, void *_ch)
 
 static const struct of_device_id rcar_gen3_phy_usb2_match_table[] = {
 	{
+		.compatible = "renesas,usb2-phy-r7s9210"
+	},
+	{
 		.compatible = "renesas,usb2-phy-r8a7795",
 		.data = (void *)RCAR_GEN3_PHY_HAS_DEDICATED_PINS,
 	},
@@ -460,6 +471,9 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
+
+	if (of_property_read_bool(dev->of_node, "renesas,uses_usb_x1"))
+		channel->uses_usb_x1 = true;
 
 	/*
 	 * devm_phy_create() will call pm_runtime_enable(&phy->dev);
