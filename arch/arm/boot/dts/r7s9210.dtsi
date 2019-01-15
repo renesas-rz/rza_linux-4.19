@@ -399,6 +399,48 @@
 		status = "disabled";
 	};
 
+	usb2_phy0: usb-phy@e8218200 {
+		compatible = "renesas,usb2-phy-r7s9210";
+		reg = <0xe8218200 0x10>;
+		interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 61>;
+		power-domains = <&cpg>;
+		#phy-cells = <0>;
+		status = "disabled";
+	};
+
+	ehci0: usbhcd@e8218100 {
+		compatible = "generic-ehci";
+		reg = <0xe8218100 0x100>;
+		interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 61>;
+		phys = <&usb2_phy0>;
+		phy-names = "usb0";
+		power-domains = <&cpg>;
+		status = "disabled";
+	};
+
+	usb2_phy1: usb-phy@e821a200 {
+		compatible = "renesas,usb2-phy-r7s9210";
+		reg = <0xe821a200 0x10>;
+		interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 60>;
+		power-domains = <&cpg>;
+		#phy-cells = <0>;
+		status = "disabled";
+	};
+
+	ehci1: usbhcd@e821a100 {
+		compatible = "generic-ehci";
+		reg = <0xe821a100 0x100>;
+		interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cpg CPG_MOD 60>;
+		phys = <&usb2_phy1>;
+		phy-names = "usb1";
+		power-domains = <&cpg>;
+		status = "disabled";
+	};
+
 	dma0: dma-controller@e8220000 {
 		compatible = "renesas,rza-dma";
 		reg = <0xe8220000 0x720>,

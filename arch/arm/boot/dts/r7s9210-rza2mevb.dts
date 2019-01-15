@@ -162,6 +162,20 @@
 			 <RZA2_PINMUX(PORT5, 1, 3)>;	/* SD0_WP */
 	};
 
+	/* USB Channel 0 */
+	usb0_pins: usb0 {
+		pinmux = <RZA2_PINMUX(PORT5, 2, 3)>, /* VBUSIN0 */
+			 <RZA2_PINMUX(PORTC, 6, 1)>, /* VBUSEN0 */
+			 <RZA2_PINMUX(PORTC, 7, 1)>; /* OVRCUR0 */
+	};
+
+	/* USB Channel 1 */
+	usb1_pins: usb1 {
+		pinmux = <RZA2_PINMUX(PORTC, 0, 1)>, /* VBUSIN1 */
+			 <RZA2_PINMUX(PORTC, 5, 1)>, /* VBUSEN1 */
+			 <RZA2_PINMUX(PORT7, 5, 5)>; /* OVRCUR1 */
+	};
+
 	/* Ethernet - RMII mode */
 	/* Channel 0 */
 	eth0_pins: eth0 {
@@ -263,6 +277,33 @@
         bus-width = <4>;
         status = "okay";
 	disable-wp;
+};
+
+/* USB-0 PHY */
+&usb2_phy0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb0_pins>;
+	renesas,uses_usb_x1;
+	status = "okay";
+};
+
+/* USB-0 as Host */
+/* NOTE: Requires JP3 to be fitted */
+&ehci0 {
+	status = "okay";
+};
+
+/* USB-1 PHY */
+&usb2_phy1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb1_pins>;
+	renesas,uses_usb_x1;
+	status = "okay";
+};
+
+/* USB-1 as Host */
+&ehci1 {
+	status = "okay";
 };
 
 &ether0 {
