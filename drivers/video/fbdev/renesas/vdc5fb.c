@@ -257,6 +257,11 @@ static int vdc5fb_update_regs(struct vdc5fb_priv *priv,
 		} while (--timeout > 0);
 	/* wait for max. 100 ms... */
 	}
+
+	/* Since not all VDC5 features are used, we can ignore some timeouts */
+	if ((reg == SC0_SCL0_UPDATE) || (reg == IMGCNT_UPDATE) || (reg == SC0_SCL1_UPDATE))
+		return 0;
+
 	dev_err(&priv->pdev->dev, "update_regs timeout reg=%08lX, bits=%08lX, now=%08lX\n",
 		vdc5fb_offsets[reg],
 		(long unsigned int)bits,
