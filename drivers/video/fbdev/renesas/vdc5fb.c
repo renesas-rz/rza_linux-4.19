@@ -814,7 +814,9 @@ static int vdc5fb_init_graphics(struct vdc5fb_priv *priv)
 		printk("vdc5fb: Layer %u Enabled (%ux%u @ 0x%08x)\n",i,layer->xres,layer->yres, layer->base);
 
 		vdc5fb_iowrite32(layer->base, update_addr[i] + GR_FLM2_OFFSET);	/* frame buffer address*/
-		tmp = GR_LN_OFF(layer->xres * (layer->bpp / 8));	/* length of each line (and Frame Number=0)*/
+		tmp = GR_LN_OFF(layer->xres * layer->bpp / 8);	/* length of each line (and Frame Number=0)*/
+		if ((layer->xres * layer->bpp / 8) % 32)
+			dev_err(&priv->pdev->dev, "!!ERROR!! The width of a line must be a multiple of 32 bytes\n");
 		vdc5fb_iowrite32(tmp, update_addr[i] + GR_FLM3_OFFSET);
 		tmp = GR_FLM_LOOP(layer->yres - 1);
 		tmp |= GR_FLM_LNUM(layer->yres - 1);
