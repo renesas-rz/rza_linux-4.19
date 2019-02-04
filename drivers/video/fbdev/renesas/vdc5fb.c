@@ -737,6 +737,9 @@ static int vdc5fb_init_scalers(struct vdc5fb_priv *priv)
 #define GR_AB1_OFFSET		0x20
 #define GR_AB2_OFFSET		0x24
 #define GR_AB3_OFFSET		0x28
+#define GR_AB7_OFFSET		0x38
+#define GR_AB8_OFFSET		0x3C
+#define GR_AB9_OFFSET		0x40
 #define GR_BASE_OFFSET		0x4C
 
 #define vdc5fb_iowrite32(d,r) iowrite32((u32) d, (void *) r)
@@ -1892,6 +1895,122 @@ static ssize_t vdc5fb_store_layer(struct device *dev,
 	return count;
 }
 
+static ssize_t vdc5fb_show_color_replace(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct vdc5fb_priv *priv = dev_get_drvdata(dev);
+	int layer;
+	int count = 0;
+	u32 update_addr[4];
+	uint32_t ab7, ab8, ab9;
+
+	update_addr[0] = (u32)priv->base + vdc5fb_offsets[GR0_UPDATE];
+#ifdef VDC5
+	update_addr[1] = (u32)priv->base + vdc5fb_offsets[GR1_UPDATE];
+#endif /* VDC5 */
+	update_addr[2] = (u32)priv->base + vdc5fb_offsets[GR2_UPDATE];
+	update_addr[3] = (u32)priv->base + vdc5fb_offsets[GR3_UPDATE];
+
+	for (layer=0; layer<4; layer++) {
+#ifdef VDC6
+		if (layer == 1)
+			continue;
+#endif /* VDC6 */
+
+		count += sprintf(buf + count, "layer%d = ", layer);
+
+		/* Check AB7 to determine if enabled */
+		ab7 = ioread32((void *)update_addr[layer] + GR_AB7_OFFSET);
+		if (ab7 & 1) {
+			ab8 = ioread32((void *)update_addr[layer] + GR_AB8_OFFSET);
+			ab9 = ioread32((void *)update_addr[layer] + GR_AB9_OFFSET);
+			count += sprintf(buf + count, "0x%08X -> 0x%08X\n", ab8, ab9);
+		}
+		else {
+			count += sprintf(buf + count, "off\n");
+		}
+	}
+	return count;
+}
+
+static ssize_t vdc5fb_store_color_replace(struct device *dev,
+		struct device_attribute *attr, const char *buf,
+		size_t count)
+{
+	struct vdc5fb_priv *priv = dev_get_drvdata(dev);
+	int i;
+	int found = 0;
+	int find_next = 0;
+	u32 new_ab7, new_ab8, new_ab9;
+	u16 layer;
+	char tmp[20];
+	u32 update_addr[4];
+
+	update_addr[0] = (u32)priv->base + vdc5fb_offsets[GR0_UPDATE];
+#ifdef VDC5
+	update_addr[1] = (u32)priv->base + vdc5fb_offsets[GR1_UPDATE];
+#endif /* VDC5 */
+	update_addr[2] = (u32)priv->base + vdc5fb_offsets[GR2_UPDATE];
+	update_addr[3] = (u32)priv->base + vdc5fb_offsets[GR3_UPDATE];
+
+
+	for (i=0; i < count; i++) {
+		// Find next value to scan
+		if (find_next) {
+			// Advance to next item (line or comma separated)
+			if ((buf[i] == '\n') || (buf[i] == ','))
+				find_next = 0;
+
+			continue;
+		}
+
+		// Remove any leading white spaces or blank lines
+		if ((buf[i] == ' ') || (buf[i] == '\t') || (buf[i] == '\n') || (buf[i] == '\r'))
+			continue;
+
+		/* 6th character is the layer number "layer0" */
+		layer = buf[i + 5] - '0';
+		if (layer > 3) {
+			printk("[ERROR] Bad parameter passed (layer number = %d)\n", layer);
+			return count;
+		}
+
+		// Skip over layer0 = "
+		i += 9;
+
+		sscanf(buf + i, "%s", tmp);
+		if (!strcmp(tmp, "off")) {
+
+			// Just set AB7 bit 0 to zero and be done
+			new_ab7 = ioread32((void *)update_addr[layer] + GR_AB7_OFFSET);
+			new_ab7 &= ~1;
+			vdc5fb_iowrite32(new_ab7, update_addr[layer] + GR_AB7_OFFSET);
+
+			return count;
+		}
+		else {
+			found = sscanf(buf + i, "0x%X to 0x%X", &new_ab8, &new_ab9);
+			if (found != 2) {
+				printk("[ERROR] Bad parameter passed\n");
+				return count;
+			}
+			/* Setting for RGB-Chroma-key support on Layer */
+			vdc5fb_iowrite32(new_ab8, update_addr[layer] + GR_AB8_OFFSET);
+			vdc5fb_iowrite32(new_ab9, update_addr[layer] + GR_AB9_OFFSET);
+			new_ab7 = ioread32((void *)(update_addr[layer] + GR_AB7_OFFSET));
+			new_ab7 |= 1;
+			vdc5fb_iowrite32(new_ab7, update_addr[layer] + GR_AB7_OFFSET);
+			vdc5fb_iowrite32(0x10, update_addr[layer]);// (commit new register settings)
+
+			return count;
+		}
+	}
+
+	/* Return the number of characters (bytes) we used from the buffer */
+	return count;
+}
+
+
 static struct device_attribute vdc5fb_device_attributes[] = {
 	__ATTR(	layer0, 			/* the name of the virtual file will appear as */
 		0644, 				/* Virtual file permissions */
@@ -1902,6 +2021,7 @@ static struct device_attribute vdc5fb_device_attributes[] = {
 #endif
 	__ATTR(layer2, 0644, vdc5fb_show_layer, vdc5fb_store_layer),
 	__ATTR(layer3, 0644, vdc5fb_show_layer, vdc5fb_store_layer),
+	__ATTR(color_replace, 0644, vdc5fb_show_color_replace, vdc5fb_store_color_replace),
 };
 
 static int vdc5fb_probe(struct platform_device *pdev)
