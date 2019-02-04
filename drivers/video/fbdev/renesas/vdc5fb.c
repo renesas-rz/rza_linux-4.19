@@ -1985,7 +1985,7 @@ static ssize_t vdc5fb_store_color_replace(struct device *dev,
 			new_ab7 = ioread32((void *)update_addr[layer] + GR_AB7_OFFSET);
 			new_ab7 &= ~1;
 			vdc5fb_iowrite32(new_ab7, update_addr[layer] + GR_AB7_OFFSET);
-
+			vdc5fb_iowrite32(0x10, update_addr[layer]);// (commit new register settings)
 			return count;
 		}
 		else {
