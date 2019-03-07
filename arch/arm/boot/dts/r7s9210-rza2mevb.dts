@@ -147,6 +147,12 @@
 			 <RZA2_PINMUX(PORT9, 1, 4)>;	/* RxD4 */
 	};
 
+	/* RIIC ch2 (MIPI camera) */
+	i2c2_pins: i2c2 {
+		pinmux = <RZA2_PINMUX(PORTD, 4, 1)>,	/* RIIC2SCL */
+			 <RZA2_PINMUX(PORTD, 5, 1)>;	/* RIIC2SDA */
+	};
+
 	/* RIIC ch3 (Touchscreen, EEPROM) */
 	i2c3_pins: i2c3 {
 		pinmux = <RZA2_PINMUX(PORTD, 6, 1)>,	/* RIIC3SCL */
@@ -366,6 +372,15 @@
                 reg = <0x50>;
                 pagesize = <64>;
         };
+};
+
+/* RIIC2 (MIPI Camera) */
+&i2c2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+
+	status = "okay";
+	clock-frequency = <400000>;
 };
 
 /* ========== LCD 24-bit Parallel Interface ========== */
