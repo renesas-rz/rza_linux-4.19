@@ -55,6 +55,10 @@
 		/* It is recommended to always map the serial console as /dev/ttySC0
 		 * in you system regardless of the actual SCIF channel used */
 		serial0 = &scif4;
+#ifdef ADDITIONAL_CONSOLE
+		/* Force SCIF1 to show up as /dev/ttySC1 */
+		serial1 = &scif1;
+#endif
 	};
 
 	chosen {
@@ -146,6 +150,14 @@
 		pinmux = <RZA2_PINMUX(PORT9, 0, 4)>,	/* TxD4 */
 			 <RZA2_PINMUX(PORT9, 1, 4)>;	/* RxD4 */
 	};
+
+#ifdef ADDITIONAL_CONSOLE
+	/* Additional Serial Console */
+	scif1_pins: serial1 {
+		pinmux = <RZA2_PINMUX(PORT7, 3, 4)>,	/* TxD1 */
+			 <RZA2_PINMUX(PORT7, 1, 4)>;	/* RxD1 */
+	};
+#endif
 
 	/* RIIC ch2 (MIPI camera) */
 	i2c2_pins: i2c2 {
@@ -281,6 +293,26 @@
 	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
 	status = "okay";
 };
+
+#ifdef ADDITIONAL_CONSOLE
+/* Additional Serial Console */
+/* Uses the DRP header, so requires SW6-1 = OFF
+ * CN2-7 = DRP5/RxD1
+ * CN2-8 = DRP6/TxD1
+ * CN2-10 = GND
+ *
+ * Run this to get a login in /dev/ttySC1
+ *   $ su root -c "getty 115200 /dev/ttySC1 vt100" &
+ *
+ */
+&scif1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&scif1_pins>;
+
+	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
+	status = "okay";
+};
+#endif
 
 &sdhi0 {
         pinctrl-names = "default";
