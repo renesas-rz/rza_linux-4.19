@@ -91,7 +91,7 @@
 	/* File System in XIP QSPI */
 	/* Remember, we'll be in QSPI XIP mode at this point */
 	/* Requires CONFIG_MTD_ROM=y */
-	qspi@18000000 {
+	qspi@20000000 {
 		compatible = "mtd-rom";
 		//probe-type = "map_rom";
 		probe-type = "direct-mapped";	// XIP from QSPI
@@ -102,6 +102,11 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 
+		partition@80000 {
+			label ="uboot_env";
+			reg = <0x00080000 0x010000>; /* 64kB @ 0x20080000 */
+			read-only;
+		};
 		partition@800000 {
 			label ="rootfs_xipcramfs";
 			reg = <0x0800000 0x1000000>; /* 16MB @ 0x20800000 */
@@ -618,7 +623,7 @@
 &dma0  {
 		/*slave id for another device*/
 	slave_id=< RZADMA_SLAVE_RSPI0_TX
-			   RZADMA_SLAVE_RSPI0_RX>;	
+			   RZADMA_SLAVE_RSPI0_RX>;
 		/* address of slave device*/
 	addr=< 0xe800c804
 		   0xe800c804>;
