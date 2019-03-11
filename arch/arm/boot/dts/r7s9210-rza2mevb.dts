@@ -16,6 +16,20 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pinctrl/r7s9210-pinctrl.h>
 
+/* System Memory (must choose 1) */
+//#define MEM_INTERNAL_RAM	/* Use 4MB Internal RAM as system memory */
+#define MEM_HYPERRAM		/* Use external HyperRAM as system memory */
+//#define MEM_SDRAM		/* Use external SDRAM as system memory */
+
+/* Main serial console (must choose 1) */
+#define CONSOLE 4		/* SCIF4 using CN5 (on-board USB-serial labeled "UART") */
+//#define CONSOLE 2		/* SCIF2 using CN17 Header labeled "CMOS" */
+//#define CONSOLE 1		/* SCIF1 using CN2 Header labeled "DRP" */
+
+/* Additional serial connections (optional) */
+//#define ADDITIONAL_SERIAL 2	/* SCIF2 as /dev/ttySC1 */
+//#define ADDITIONAL_SERIAL 1	/* SCIF1 as /dev/ttySC1 */
+
 / {
 	model = "RZA2MEVB";
 	compatible = "renesas,rza2mevb", "renesas,r7s9210";
@@ -23,10 +37,22 @@
 	aliases {
 		/* It is recommended to always map the serial console as /dev/ttySC0
 		 * in you system regardless of the actual SCIF channel used */
+#if (CONSOLE == 1)
+		serial0 = &scif1;
+#elif (CONSOLE == 2)
+		serial0 = &scif2;
+#elif (CONSOLE == 4)
 		serial0 = &scif4;
-#ifdef ADDITIONAL_CONSOLE
+#endif
+
+#if defined(ADDITIONAL_SERIAL)
+#if (ADDITIONAL_SERIAL == 1)
 		/* Force SCIF1 to show up as /dev/ttySC1 */
 		serial1 = &scif1;
+#elif (ADDITIONAL_SERIAL == 2)
+		/* Force SCIF2 to show up as /dev/ttySC1 */
+		serial1 = &scif2;
+#endif
 #endif
 	};
 
@@ -38,8 +64,15 @@
 
 	memory@80000000 {
 		device_type = "memory";
-		//reg = <0x80000000 0x00400000>;	 /* 4Mbyte of Internal RAM only */
-		reg = <0x40000000 0x00800000>;	 /* 8Mbyte of HyperRAM only */
+#ifdef MEM_INTERNAL_RAM
+		reg = <0x80000000 0x00400000>;	 /* 4Mbyte of Internal RAM */
+#endif
+#ifdef MEM_HYPERRAM
+		reg = <0x40000000 0x00800000>;	 /* 8Mbyte of External HyperRAM */
+#endif
+#ifdef MEM_SDRAM
+		reg = <0x0C000000 0x04000000>;	 /* 64Mbyte of External SDRAM */
+#endif
 	};
 
 	lbsc {
@@ -120,13 +153,17 @@
 			 <RZA2_PINMUX(PORT9, 1, 4)>;	/* RxD4 */
 	};
 
-#ifdef ADDITIONAL_CONSOLE
-	/* Additional Serial Console */
+	/* Serial Console or additional serial */
+	scif2_pins: serial2 {
+		pinmux = <RZA2_PINMUX(PORTE, 2, 3)>,	/* TxD2 */
+			 <RZA2_PINMUX(PORTE, 1, 3)>;	/* RxD2 */
+	};
+
+	/* Serial Console or additional serial */
 	scif1_pins: serial1 {
 		pinmux = <RZA2_PINMUX(PORT7, 3, 4)>,	/* TxD1 */
 			 <RZA2_PINMUX(PORT7, 1, 4)>;	/* RxD1 */
 	};
-#endif
 
 	/* RIIC ch2 (MIPI camera) */
 	i2c2_pins: i2c2 {
@@ -164,8 +201,12 @@
 	/* USB Channel 1 */
 	usb1_pins: usb1 {
 		pinmux = <RZA2_PINMUX(PORTC, 0, 1)>, /* VBUSIN1 */
+#if (CONSOLE == 4)
 			 <RZA2_PINMUX(PORTC, 5, 1)>, /* VBUSEN1 */
 			 <RZA2_PINMUX(PORT7, 5, 5)>; /* OVRCUR1 */
+#else
+			 <RZA2_PINMUX(PORTC, 5, 1)>; /* VBUSEN1 */
+#endif
 	};
 
 	/* Ethernet - RMII mode */
@@ -254,29 +295,53 @@
 	};
 };
 
-/* Serial Console */
-&scif4 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&scif4_pins>;
-
-	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
-	status = "okay";
-};
-
-#ifdef ADDITIONAL_CONSOLE
-/* Additional Serial Console */
-/* Uses the DRP header, so requires SW6-1 = OFF
+#if (CONSOLE == 1) || (ADDITIONAL_SERIAL == 1)
+/* Serial Port */
+/* Uses the "DRP" header, so requires SW6-1 = OFF
  * CN2-7 = DRP5/RxD1
  * CN2-8 = DRP6/TxD1
  * CN2-10 = GND
  *
- * Run this to get a login in /dev/ttySC1
+ * When used as additional serial, run this to get a login in /dev/ttySC1
  *   $ su root -c "getty 115200 /dev/ttySC1 vt100" &
  *
  */
 &scif1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&scif1_pins>;
+
+	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
+	status = "okay";
+};
+#endif
+
+
+#if (CONSOLE == 2) || (ADDITIONAL_SERIAL == 2)
+/* Serial Port */
+/* Uses the "CMOS" header, so requires SW6-4 = OFF
+ * CN17-9 = RxD1
+ * CN17-10 = TxD1
+ * CN17-2 = GND
+ *
+ * When used as additional serial, run this to get a login in /dev/ttySC1
+ *   $ su root -c "getty 115200 /dev/ttySC1 vt100" &
+*/
+&scif2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&scif2_pins>;
+
+	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
+	status = "okay";
+};
+#endif
+
+/* Serial Port */
+/* Uses on board USB-serial convert labeled "UART" */
+/* Requires SW6-3 = OFF */
+#if (CONSOLE == 4)
+&scif4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&scif4_pins>;
 
 	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
 	status = "okay";
@@ -318,6 +383,9 @@
 	status = "okay";
 };
 
+/* Make sure Ethernet 1 pins are usable (SW6-4 = ON) */
+#if (CONSOLE != 1) && (ADDITIONAL_SERIAL != 1) && \
+    (CONSOLE != 2) && (ADDITIONAL_SERIAL != 2)
 &ether0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&eth0_pins>;
@@ -328,6 +396,7 @@
 		reg = <0>;
 	};
 };
+#endif
 
 &ether1 {
 	pinctrl-names = "default";
@@ -599,12 +668,12 @@
 #endif
 
 /* ========== SPI EEPROM Example ========== */
-#if 1
+#if 0
 
-/* On early RZ/A2M Eval Board, a SPI EEPROM (R1EX25002ASA00G) was populated and
- * connect to RSPI-0.
+/* On early RZ/A2M CPU boards, a SPI EEPROM (R1EX25002ASA00G) was populated and
+ * connect to RSPI-0. Note that these pins conflicted with SDRAM.
  *
- * In the kernel, enalbe CONFIG_EEPROM_AT25=y
+ * In the kernel, enable CONFIG_EEPROM_AT25=y
  *
  * Will show up as /sys/class/spi_master/spi0/spi0.0/eeprom
  *
