@@ -26,6 +26,7 @@
 #include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/mm.h>
+#include <linux/clk.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include "tes_dave.h"
@@ -312,6 +313,13 @@ static int dave2d_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can't register irq %d\n", dave->irq_no);
 		goto IRQ_FAILED;
 	}
+
+	dave->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(dave->clk)) {
+		dev_err(&pdev->dev, "can't get clock\n");
+		goto DEV_FAILED;
+	}
+	clk_prepare_enable(dave->clk);
 
 	return 0;
 

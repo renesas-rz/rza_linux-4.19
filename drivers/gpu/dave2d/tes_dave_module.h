@@ -57,6 +57,7 @@ struct dave2d_dev
 	dev_t dev;
 	struct cdev cdev;
 	struct device *device;
+	struct clk *clk;
 };
 
 #endif /* TES_DAVE_MODULE_H_ */
