@@ -429,7 +429,7 @@ static bool dma_irq_handle_channel(struct dmac_channel *channel)
 
 	chctrl = rzadma_ch_readl(channel, CHCTRL, 1);
 	rzadma_ch_writel(channel,
-			chctrl | CHCTRL_CLREND | CHCTRL_CLRRQ,
+			chctrl | CHCTRL_CLREND,
 			CHCTRL, 1);
 schedule:
 #ifndef THREADED_CALLBACK
