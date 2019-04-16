@@ -415,7 +415,7 @@
 		interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cpg CPG_MOD 61>;
 		phys = <&usb2_phy0>;
-		phy-names = "usb0";
+		phy-names = "usb";
 		power-domains = <&cpg>;
 		status = "disabled";
 	};
@@ -436,7 +436,7 @@
 		interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cpg CPG_MOD 60>;
 		phys = <&usb2_phy1>;
-		phy-names = "usb1";
+		phy-names = "usb";
 		power-domains = <&cpg>;
 		status = "disabled";
 	};
