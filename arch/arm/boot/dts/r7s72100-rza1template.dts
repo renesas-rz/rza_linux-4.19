@@ -1,0 +1,521 @@
+// SPDX-License-Identifier: GPL-2.0 or MIT
+/*
+ * Device Tree Source for the RZATEMPLATE board
+ *
+ * Copyright (C) 2017 Renesas Electronics
+ *
+ * This file is dual-licensed: you can use it either under the terms
+ * of the GPL or the MIT license, at your option. Note that this dual
+ * licensing only applies to this file, and not this project as a
+ * whole.
+ *
+ */
+
+/dts-v1/;
+//#define CONFIG_RZA1L	/* must be defined before including r7s72100.dtsi for RZ/A1L devices */
+#include "r7s72100.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/r7s72100-pinctrl.h>
+
+/ {
+	model = "RZATEMPLATE";
+	compatible = "mycompany,rzatemplate", "renesas,r7s72100";
+
+	aliases {
+		/* It is recommended to always map the serial console as /dev/ttySC0
+		 * in you system regardless of the actual SCIF channel used */
+		serial0 = &scif2;
+	};
+
+	chosen {
+		/* Keep extra spaces at the end in case you want to add additional command line options from u-boot */
+		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000 rootfstype=axfs root=/dev/null rootflags=physaddr=0x18800000     ";
+		stdout-path = "serial0:115200n8";
+	};
+
+	memory@8000000 {
+		device_type = "memory";
+		reg = <0x20000000 0x00A00000>;
+	};
+
+	lbsc {
+		#address-cells = <1>;
+		#size-cells = <1>;
+	};
+
+#if 0 /* LED (GPIO) as an example */
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+
+		led0 {
+			gpios = <&port7 1 GPIO_ACTIVE_LOW>;
+		};
+	};
+#endif
+
+#if 1
+	/* File System in XIP QSPI */
+	/* Remember, we'll be in QSPI XIP mode at this point */
+	/* Requires CONFIG_MTD_ROM=y */
+	qspi@18000000 {
+		compatible = "mtd-rom";
+		probe-type = "map_rom";
+		reg = <0x18000000 0x4000000>;	/* 64 MB*/
+		bank-width = <4>;
+		device-width = <1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@800000 {
+			label ="user";
+			reg = <0x0800000 0x800000>; /* 8MB @ 0x18800000 */
+			read-only;
+		};
+	};
+#endif
+};
+
+/* SECT_EXTAL */
+/* EXTAL (remove if not populated) */
+&extal_clk {
+	clock-frequency = <13330000>;	/* 13.33MHz */
+};
+/* SECT_EXTAL_END */
+
+/* SECT_USB_EXTAL */
+/* USB_X1 (remove if not populated) */
+&usb_x1_clk {
+	clock-frequency = <48000000>;	/* 48MHz */
+};
+/* SECT_USB_EXTAL_END */
+
+/* SECT_RTC_X1 */
+/* RTC_X1 (remove if not populated) */
+&rtc_x1_clk {
+	clock-frequency = <32768>;
+};
+/* SECT_RTC_X1_END */
+
+/* Define your pin settings here
+ *
+ * Please refer to tables 54.xx in the Hardware Manual for the correct
+ * 'Alternative Mode' number for each pin. Caution: Alt Mode numbers
+ * vary per pin and per device tyep (RZ/A1L,A1M,A1H)
+ *
+ * Syntax:
+ *    pinmux = <RZA1_PINMUX(Port, Pin, Alt Mode)>
+ *
+ * Example:
+ *    pinmux = <RZA1_PINMUX(3, 0, 6)>   /* P3_0 = TxD2 */
+/*
+ */
+&pinctrl {
+
+	/* Serial Console */
+	scif2_pins: serial2 {
+		pinmux = <RZA1_PINMUX(?, ?, ?)>,	/* TxD2 */
+			 <RZA1_PINMUX(?, ?, ?)>;	/* RxD2 */
+	};
+
+/* SECT_ETHERNET */
+	/* Ethernet Pins */
+	ether_pins: ether {
+		pinmux = <RZA1_PINMUX(?, ?, ?)>,	/* ET_COL   */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_MDC   */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_MDIO  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_RXCLK */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_RXER  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_RXDV  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_TXCLK */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_TXER  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_TXEN  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_CRS   */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_TXD0  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_TXD1  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_TXD2  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_TXD3  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_RXD0  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_RXD1  */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* ET_RXD2  */
+			 <RZA1_PINMUX(?, ?, ?)>;	/* ET_RXD3  */
+	};
+/* SECT_ETHERNET_END */
+
+/* SECT_SDHI_CH0 */
+	/* SDHI ch0 Pins */
+	sdhi0_pins: sdhi0 {
+		pinmux = <RZA1_PINMUX(?, ?, ?)>,	/* SD_CD_0 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_WP_0 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_D1_0 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_D0_0 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_CLK_0 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_CMD_0 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_D3_0 */
+			 <RZA1_PINMUX(?, ?, ?)>;	/* SD_D2_0 */
+	};
+/* SECT_SDHI_CH0_END */
+
+/* SECT_SDHI_CH1 */
+	/* SDHI ch1 Pins */
+	sdhi1_pins: sdhi1 {
+		pinmux = <RZA1_PINMUX(?, ?, ?)>,	/* SD_CD_1 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_WP_1 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_D1_1 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_D0_1 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_CLK_1 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_CMD_1 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* SD_D3_1 */
+			 <RZA1_PINMUX(?, ?, ?)>;	/* SD_D2_1 */
+	};
+/* SECT_SDHI_CH1_END */
+
+/* SECT_MMC */
+	/* MMC Pins */
+	mmc_pins: mmc {
+		pinmux = <RZA1_PINMUX(?, ?, ?)>,	/* MMC_CD */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_D1 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_D0 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_CLK */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_CMD */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_D3 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_D2 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_D4 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_D5 */
+			 <RZA1_PINMUX(?, ?, ?)>,	/* MMC_D6 */
+			 <RZA1_PINMUX(?, ?, ?)>;	/* MMC_D7 */
+	};
+/* SECT_MMC_END */
+
+#if 0 /* I2C pin setup example */
+	/* RIIC ch0 Pins */
+	i2c0_pins: i2c0 {
+		pinmux = <RZA1_PINMUX(?, ?, ?)>,	/* RIIC0SCL */
+			 <RZA1_PINMUX(?, ?, ?)>;	/* RIIC0SDA */
+	};
+#endif
+
+/* SECT_VDC5 */
+#if 0 /* IRQ pin setup example */
+	/* IRQx (for Touchscreen) */
+	irq1_pins: irq1 {
+		pinmux = <RZA1_PINMUX(4, 9, 8)>;	/* IRQx */
+	};
+#endif
+/* SECT_VDC5_END */
+
+/* SECT_VDC5_PARALLEL */
+	/* VDC5 LCD ch 0 Pins */
+	vdc50_pins: vdc50 {
+		pinmux =
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA0 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA1 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA2 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA3 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA4 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA5 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA6 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA7 */
+
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA8 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA9 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA10 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA11 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA12 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA13 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA14 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA15 */
+
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA16 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA17 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA18 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA19 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA20 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA21 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA22 */
+			<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_DATA23 */
+
+			/* TCON pins (some may not be used) */
+			//<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_TCON0 */
+			//<RZA1_PINMUX(?, ?, ?)>,	/* LCD0_TCON1 */
+			<RZA1_PINMUX(?, ?, ?)>,		/* LCD0_TCON2 */
+			<RZA1_PINMUX(?, ?, ?)>,		/* LCD0_TCON3 */
+			<RZA1_PINMUX(?, ?, ?)>,		/* LCD0_TCON4 */
+			//<RZA1_PINMUX(?, ?,  ?)>,	/* LCD0_TCON5 */
+			//<RZA1_PINMUX(?, ?,  ?)>,	/* LCD0_TCON6 */
+
+			<RZA1_PINMUX(?, ?, ?)>;	/* LCD0_CLK */
+	};
+/* SECT_VDC5_PARALLEL_END */
+/* SECT_VDC5_LVDS */
+	/* VDC5 LCD ch 0 LVDS Pins */
+	vdc50_pins: vdc50 {
+		pinmux = <RZA1_PINMUX(5, 0, 1)>,	/* TXCLKOUTP */
+			 <RZA1_PINMUX(5, 1, 1)>,	/* TXCLKOUTM */
+			 <RZA1_PINMUX(5, 2, 1)>,	/* TXOUT2P */
+			 <RZA1_PINMUX(5, 3, 1)>,	/* TXOUT2M */
+			 <RZA1_PINMUX(5, 4, 1)>,	/* TXOUT1P */
+			 <RZA1_PINMUX(5, 5, 1)>,	/* TXOUT1M */
+			 <RZA1_PINMUX(5, 6, 1)>,	/* TXOUT0P */
+			 <RZA1_PINMUX(5, 7, 1)>;	/* TXOUT0M */
+	};
+/* SECT_VDC5_LVDS_END */
+
+};
+
+/* High resolution System tick timers */
+&ostm0 {
+	status = "okay";
+};
+
+&ostm1 {
+	status = "okay";
+};
+
+/* The MTU2 system timer is not really needed if you are using the higher
+ * resolution OSTM timer */
+# if 0
+&mtu2 {
+	status = "okay";
+};
+#endif
+
+/* SECT_RTC_X1 */
+/* Real Time Clock */
+&rtc {
+	status = "okay";
+};
+/* SECT_RTC_X1_END */
+
+/* Serial Console */
+&scif2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&scif2_pins>;
+
+	//uart-has-rtscts;	/* uncomment to use RTS/CTS, but you will also need to set up the pins */
+	status = "okay";
+};
+
+/* SECT_ETHERNET */
+/* Ethernet */
+&ether {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ether_pins>;
+	status = "okay";
+	renesas,no-ether-link;
+	phy-handle = <&phy0>;
+	phy0: ethernet-phy@0 {
+		reg = <0>;
+	};
+};
+/* SECT_ETHERNET_END */
+
+/* SECT_SDHI_CH0 */
+/* SDHI ch0 */
+&sdhi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdhi0_pins>;
+	bus-width = <4>;
+	status = "okay";
+};
+/* SECT_SDHI_CH0_END */
+
+/* SECT_SDHI_CH1 */
+/* SDHI ch1 */
+&sdhi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdhi1_pins>;
+	bus-width = <4>;
+	status = "okay";
+};
+/* SECT_SDHI_CH1_END */
+
+/* SECT_MMC */
+/* MMC */
+/*
+ * MMC devices requires a 3.3 volt regulator node.
+ * Add a 3.3v "regulator-fixed" node at the root
+ */
+/ {
+	d3_3v: regulator-d3-3v {
+		compatible = "regulator-fixed";
+		regulator-name = "D3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+};
+&mmcif {
+	pinctrl-names = "default";
+	pinctrl-0 = <&mmc_pins>;
+	vmmc-supply = <&d3_3v>;
+	vqmmc-supply = <&d3_3v>;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};
+/* SECT_MMC_END */
+
+/* SECT_USB_HOST_CH0 */
+/* USB Host ch0 */
+&usbhost0 {
+	status = "okay";
+	xtal-48mhz;
+};
+/* SECT_USB_HOST_CH0_END */
+
+/* SECT_USB_FUNCTION_CH0 */
+/* USB Function ch0 */
+&usbhs0 {
+	status = "okay";
+};
+/* SECT_USB_FUNCTION_CH0_END */
+
+/* SECT_USB_HOST_CH1 */
+/* USB Host ch1 */
+&usbhost1 {
+	/* NOTE: You MUST enable USB ch0 (host or device) first because
+	   there are some shared registers bits in USB0 that USB1 needs. */
+	status = "okay";
+	xtal-48mhz;
+};
+/* SECT_USB_HOST_CH1_END */
+
+/* SECT_USB_FUNCTION_CH1 */
+/* USB Function ch1 */
+&usbhs1 {
+	/* NOTE: You MUST enable USB ch0 (host or device) first because
+	   there are some shared registers bits in USB0 that USB1 needs. */
+	status = "okay";
+};
+/* SECT_USB_FUNCTION_CH1_END */
+
+/* SECT_VDC5 */
+/* RIIC0 (I2C Touchscreen example) */
+#if 0
+&i2c0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	status = "okay";
+	clock-frequency = <400000>;
+
+	/* Focaltech FT5x06 Capacitive Touch Panel Controller */
+	ft5x06_ts@38 {
+		compatible = "focaltech,ft5x06";
+		reg = <0x38>; /* I2C address = 0x38 */
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&irq1_pins>;
+		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_LOW>; /* IRQ1 */
+
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <480>;
+
+		/* The touchscreen on the RSK LCD is backwards for some reason */
+		touchscreen-inverted-x;
+		touchscreen-inverted-y;
+	};
+};
+#endif
+/* SECT_VDC5_END */
+
+/* SECT_VDC5 */
+/* LCD */
+#define VDC5_BPP 16 /* 16bpp or 32bpp */
+#define VDC5_FBSIZE (800*480*VDC5_BPP/8)
+#define VDC5_FB_ADDR 0	/* 0 = allocate memory at probe (don't use when using SDRAM) */
+//#define VDC5_FB_ADDR (0x60000000) /* fixed address in PAGE 0 */
+
+&vdc50 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&vdc50_pins>;
+
+	display = <&display0>;
+	status = "okay";
+
+	/* Set the physical frame buffer address for internal RAM. */
+	fb_phys_addr = <VDC5_FB_ADDR>;
+	fb_phys_size = <VDC5_FBSIZE>;
+
+	panel_name = "gwp0700cnwv04";
+	panel_pixel_xres = <800>;	/* panel native resolution */
+	panel_pixel_yres = <480>;	/* panel native resolution */
+
+
+	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
+	* for panel_icksel, panel_ocksel, and out_format */
+	panel_icksel = <3>;	/* 3=ICKSEL_P1CLK (Peripheral clock 1) */
+	panel_ocksel = <0>;	/* (don't care when lvds=0 ) */
+	out_format = <0>;	/* 0=RGB888, 1=RGB666, 2=RGB565 */
+	use_lvds = <0>;		/* Set to 0 or 1 */
+
+	/* Define how the TCON pins going to be used */
+	/* From file [ drivers/video/fbdev/renesas/vdc5fb.h ]
+	 * 0 = STVA/VS (VSYNC)
+	 * 1 = STVB/VE (Vertical Enable)
+	 * 2 = STH/SP/HS (HSYNC)
+	 * 3 = STB/LP/HE (Horizontal Enable)
+	 * 4 = CPV/GCK (Gate clock signal)
+	 * 5 = POLA (VCOM voltage polarity control signal)
+	 * 6 = POLB (VCOM voltage polarity control signal)
+	 * 7 = DE (Data Enable)
+	 * 0xff = pin not used */
+
+/* SECT_VDC5_PARALLEL */
+	/* TCON for Parallel RGB */
+	tcon_sel = <
+		0xff	/* TCON0: */
+		0xff	/* TCON1: */
+		7	/* TCON2: DATA ENABLE */
+		2	/* TCON3: HSYNC */
+		0	/* TCON4: VSYNC */
+		0xff	/* TCON5: */
+		0xff	/* TCON6: */
+		>;
+/* SECT_VDC5_PARALLEL_END */
+
+/* SECT_VDC5_LVDS */
+	/* TCON for LVDS */
+	/* For LVDS, the physical TCON pins are not used, but they still need to be
+	 * configured so they can internally be multiplexed in the LVDS stream. */
+	tcon_sel = <
+		0	/* TCON0: VSYNC		(for LVDS, VS must be TCON0) */
+		0xff	/* TCON1: 		(not connected to LVDS circuit) */
+		2	/* TCON2: HSYNC		(for LVDS, HS must be TCON2) */
+		7	/* TCON3: DATA ENABLE	(for LVDS, DE must be TCON3) */
+		0xff	/* TCON4: 		(not connected to LVDS circuit) */
+		0xff	/* TCON5: 		(not connected to LVDS circuit) */
+		0xff	/* TCON6: 		(not connected to LVDS circuit) */
+		>;
+/* SECT_VDC5_LVDS_END */
+
+	display0: display0 {
+		bits-per-pixel = <VDC5_BPP>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33325000>; /* At run time, will calculate as close to this speed without going over. */
+				/*clock-frequency = <71100000>;*/ /* min:64.3MHz, typ:71.1MHz, max:82MHz */
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <46>;
+				hfront-porch = <210>;
+				vback-porch = <23>;
+				vfront-porch = <22>;
+				hsync-len = <40>; /* max */
+				vsync-len = <20>; /* max */
+				hsync-active = <1>; /* HIGH */
+				vsync-active = <1>; /* HIGH */
+				de-active = <0>; /* LOW */
+				pixelclk-active = <0>; /* ??? */
+			};
+		};
+	};
+};
+/* SECT_VDC5_END */
+
+
