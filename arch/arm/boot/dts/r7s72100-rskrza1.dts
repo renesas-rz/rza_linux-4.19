@@ -842,3 +842,40 @@
 	status = "okay";
 };
 #endif
+
+/* ========== CAN Example ========== */
+#if 0
+/* Disable Ethernet because of pin conflict on the RSK board */
+&ether {
+	status = "disabled";
+};
+
+/* Pin setup for CAN */
+&pinctrl {
+	/* Ch 1 (conflicts with Ethernet, requires resistor change) */
+	can1_pins: can1 {
+		pinmux = <RZA1_PINMUX(5, 9, 5)>,	/* CAN1RX */
+			 <RZA1_PINMUX(5,10, 5)>;	/* CAN1TX */
+	};
+
+	/* Ch 2 (conflicts with SDRAM) */
+	can2_pins: can2 {
+		pinmux = <RZA1_PINMUX(7, 2, 5)>,	/* CAN2RX */
+			 <RZA1_PINMUX(7, 3, 5)>;	/* CAN2TX */
+	};
+};
+
+/* Clock Source Select Options */
+#define CLKR_CLKC		0	/* P1/2 */
+#define CLKR_CLK_XINCAN		1	/* CAN_CLK pin */
+
+&rza1_can {
+	pinctrl-names = "default";
+	pinctrl-0 = <&can1_pins>;
+
+	renesas,clock-select = <CLKR_CLKC>;	/* Clock source select */
+	//renesas,clk-xincan-rate = <xx>;	/* Set clock rate when CAN_CLK is used */
+	renesas,channel = <1>;
+	status = "okay";
+};
+#endif

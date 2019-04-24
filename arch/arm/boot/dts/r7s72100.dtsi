@@ -138,9 +138,9 @@
 			#clock-cells = <1>;
 			compatible = "renesas,r7s72100-mstp-clocks", "renesas,cpg-mstp-clocks";
 			reg = <0xfcfe0420 4>;
-			clocks = <&p0_clk>;
-			clock-indices = <R7S72100_CLK_MTU2>;
-			clock-output-names = "mtu2";
+			clocks = <&p0_clk>, <&p1_clk>;
+			clock-indices = <R7S72100_CLK_MTU2 R7S72100_CLK_CAN>;
+			clock-output-names = "mtu2", "can";
 		};
 
 		mstp4_clks: mstp4_clks@fcfe0424 {
@@ -840,6 +840,37 @@
 		compatible = "renesas,r7s72100-ceu";
 		interrupts = <GIC_SPI 332 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&mstp6_clks R7S72100_CLK_CEU>;
+		power-domains = <&cpg_clocks>;
+		status = "disabled";
+	};
+
+	rza1_can: can@e803a000 {
+		reg = <0xe803a000 0x1814>;
+		compatible = "renesas,rza1_can";
+		interrupts =	<GIC_SPI (253-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCANGERR */
+				<GIC_SPI (254-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCANGRECC */
+				<GIC_SPI (255-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN0REC */
+				<GIC_SPI (256-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN0ERR */
+				<GIC_SPI (267-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN0TRX */
+				<GIC_SPI (258-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN1REC */
+				<GIC_SPI (259-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN1ERR */
+				<GIC_SPI (260-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN1TRX */
+				<GIC_SPI (261-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN2REC */
+				<GIC_SPI (262-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN2ERR */
+				<GIC_SPI (263-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN2TRX */
+				<GIC_SPI (264-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN3REC */
+				<GIC_SPI (265-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN3ERR */
+				<GIC_SPI (266-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN3TRX */
+				<GIC_SPI (267-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN4REC */
+				<GIC_SPI (268-32) IRQ_TYPE_LEVEL_HIGH>, /* INTRCAN4ERR */
+				<GIC_SPI (269-32) IRQ_TYPE_LEVEL_HIGH>; /* INTRCAN4TRX */
+		interrupt-names = "intrcangerr", "intrcangrecc",
+				  "intrcan0rec", "intrcan0err", "intrcan0trx",
+				  "intrcan1rec", "intrcan1err", "intrcan1trx",
+				  "intrcan2rec", "intrcan2err", "intrcan2trx",
+				  "intrcan3rec", "intrcan3err", "intrcan3trx",
+				  "intrcan4rec", "intrcan4err", "intrcan4trx";
+		clocks = <&mstp3_clks R7S72100_CLK_CAN>;
 		power-domains = <&cpg_clocks>;
 		status = "disabled";
 	};

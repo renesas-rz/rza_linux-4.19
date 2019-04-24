@@ -119,6 +119,12 @@ config CAN_JANZ_ICAN3
 	  This driver can also be built as a module. If so, the module will be
 	  called janz-ican3.ko.
 
+config CAN_RZA1
+	depends on ARCH_R7S72100 && CAN_DEV
+	tristate "RZ/A1 onchip RS-CAN controller"
+	---help---
+	  Driver for RZ/A1 onchip RS-CAN controller
+
 config CAN_SUN4I
 	tristate "Allwinner A10 CAN controller"
 	depends on MACH_SUN4I || MACH_SUN7I || COMPILE_TEST
