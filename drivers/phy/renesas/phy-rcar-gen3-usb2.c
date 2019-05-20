@@ -90,6 +90,7 @@
 
 struct rcar_gen3_chan {
 	void __iomem *base;
+	struct device *dev;	/* platform_device's device */
 	struct extcon_dev *extcon;
 	struct phy *phy;
 	struct regulator *vbus;
@@ -325,9 +326,19 @@ static int rcar_gen3_phy_usb2_init(struct phy *p)
 	/* Initialize otg part */
 	if (channel->has_otg_pins)
 		rcar_gen3_init_otg(channel);
-	else
-		/* No otg, so default to host mode */
-		writel(0x00000000, usb2_base + USB2_COMMCTRL);
+	else {
+		/* Not OTG, so dr_mode should be set in PHY node */
+		switch (usb_get_dr_mode(channel->dev)) {
+		case USB_DR_MODE_HOST:
+			rcar_gen3_set_host_mode(channel, 1);
+			break;
+		case USB_DR_MODE_PERIPHERAL:
+			rcar_gen3_set_host_mode(channel, 0);
+			break;
+		default:
+			break;
+		}
+	}
 
 	return 0;
 }
@@ -503,6 +514,7 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, channel);
+	channel->dev = dev;
 	phy_set_drvdata(channel->phy, channel);
 
 	provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
