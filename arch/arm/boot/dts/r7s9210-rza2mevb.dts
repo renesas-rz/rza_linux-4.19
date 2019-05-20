@@ -54,6 +54,15 @@
 		serial1 = &scif2;
 #endif
 #endif
+
+		/* These force channels to show up as specific device numbers */
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		spi0 = &spi0;
+		spi1 = &spi1;
+		spi2 = &spi2;
 	};
 
 	chosen {
