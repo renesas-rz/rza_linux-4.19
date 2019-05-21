@@ -15,6 +15,7 @@
 #include <linux/extcon-provider.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
@@ -81,6 +82,9 @@
 #define USB2_ADPCTRL_IDDIG		BIT(19)
 #define USB2_ADPCTRL_IDPULLUP		BIT(5)	/* 1 = ID sampling is enabled */
 #define USB2_ADPCTRL_DRVVBUS		BIT(4)
+
+/* PHYCLK_CTRL */
+#define PHYCLK_CTRL_UCLKSEL		BIT(0)
 
 #define RCAR_GEN3_PHY_HAS_DEDICATED_PINS	1
 
@@ -311,7 +315,7 @@ static int rcar_gen3_phy_usb2_init(struct phy *p)
 	void __iomem *usb2_base = channel->base;
 
 	if (channel->uses_usb_x1)
-		writel(0x00000001, usb2_base + USB2_PHYCLK_CTRL);
+		writel(PHYCLK_CTRL_UCLKSEL, usb2_base + USB2_PHYCLK_CTRL);
 
 	/* Initialize USB2 part */
 	writel(USB2_INT_ENABLE_INIT, usb2_base + USB2_INT_ENABLE);
@@ -429,6 +433,7 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct rcar_gen3_chan *channel;
 	struct phy_provider *provider;
+	struct clk *usb_x1_clk;
 	struct resource *res;
 	int irq, ret = 0;
 
@@ -472,7 +477,8 @@ static int rcar_gen3_phy_usb2_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (of_property_read_bool(dev->of_node, "renesas,uses_usb_x1"))
+	usb_x1_clk = devm_clk_get(dev, "usb_x1");
+	if (!IS_ERR(usb_x1_clk) && clk_get_rate(usb_x1_clk))
 		channel->uses_usb_x1 = true;
 
 	/*
