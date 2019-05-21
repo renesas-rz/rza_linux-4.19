@@ -370,32 +370,58 @@
 	disable-wp;
 };
 
-/* USB-0 PHY */
+
+#if 1	/* USB-0 as Host */
+	/* NOTE: Requires JP3 to be fitted */
 &usb2_phy0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&usb0_pins>;
-	renesas,uses_usb_x1;
+	dr_mode = "host";
 	status = "okay";
 };
 
-/* USB-0 as Host */
-/* NOTE: Requires JP3 to be fitted */
 &ehci0 {
 	status = "okay";
 };
 
-/* USB-1 PHY */
-&usb2_phy1 {
+#else	/* USB-0 as Device */
+	/* NOTE: Requires JP3 to be open */
+&usb2_phy0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&usb1_pins>;
-	renesas,uses_usb_x1;
+	pinctrl-0 = <&usb0_pins>;
+	dr_mode = "peripheral";	/* Requires JP3 to be open */
 	status = "okay";
 };
 
-/* USB-1 as Host */
+&usbhs0 {
+	status = "okay";
+};
+#endif
+
+#if 1	/* USB-1 as Host */
+&usb2_phy1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb1_pins>;
+	dr_mode = "host";
+	status = "okay";
+};
+
 &ehci1 {
 	status = "okay";
 };
+
+#else	/* USB-1 as Device */
+&usb2_phy1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb1_pins>;
+	dr_mode = "peripheral";	/* Requires JP3 to be fitted */
+	status = "okay";
+};
+
+&usbhs1 {
+	status = "okay";
+};
+#endif
 
 /* Make sure Ethernet 1 pins are usable (SW6-4 = ON) */
 #if (CONSOLE != 1) && (ADDITIONAL_SERIAL != 1) && \
