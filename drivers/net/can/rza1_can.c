@@ -177,7 +177,7 @@ static const struct can_bittiming_const rz_can_bittiming_const = {
 	.tseg2_min = 2,
 	.tseg2_max = 8,
 	.sjw_max = 4,
-	.brp_min = 4,
+	.brp_min = 1,
 	.brp_max = 1024,
 	.brp_inc = 1,
 };
