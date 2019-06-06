@@ -322,7 +322,8 @@
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&irq1_pins>;
-		interrupts = <GIC_SPI (33-32) IRQ_TYPE_LEVEL_LOW>; /* IRQ1 */
+		interrupt-parent = <&irqc>;
+		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;	/* IRQ1 */
 
 		touchscreen-size-x = <800>;
 		touchscreen-size-y = <480>;
