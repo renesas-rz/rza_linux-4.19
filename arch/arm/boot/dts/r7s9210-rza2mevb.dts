@@ -353,8 +353,8 @@
 #if (CONSOLE == 2) || (ADDITIONAL_SERIAL == 2)
 /* Serial Port */
 /* Uses the "CMOS" header, so requires SW6-4 = OFF
- * CN17-9 = RxD1
- * CN17-10 = TxD1
+ * CN17-9 = RxD2
+ * CN17-10 = TxD2
  * CN17-2 = GND
  *
  * When used as additional serial, run this to get a login in /dev/ttySC1
