@@ -204,7 +204,7 @@ not_angel:
 		 * of this range.
 		 */
 		mov	r4, pc
-		and	r4, r4, #0xf8000000
+		and	r4, r4, #0xfc000000
 		/* Determine final kernel image address. */
 		add	r4, r4, #TEXT_OFFSET
 #else
