@@ -31,6 +31,13 @@
 //#define ADDITIONAL_SERIAL 2	/* SCIF2 as /dev/ttySC1 */
 //#define ADDITIONAL_SERIAL 1	/* SCIF1 as /dev/ttySC1 */
 
+
+/* Assign IDs to DMA channels (actual number is not important) */
+#define RZADMA_SSI0_TX	1
+#define RZADMA_SSI0_RX	2
+#define RZADMA_RSPI0_TX	3
+#define RZADMA_RSPI0_RX	4
+
 / {
 	model = "RZA2MEVB";
 	compatible = "renesas,rza2mevb", "renesas,r7s9210";
@@ -326,6 +333,15 @@
 			<RZA2_PINMUX(PORT4, 6, 2)>, // TXCLKOUTP
 			<RZA2_PINMUX(PORT4, 7, 2)>; // TXCLKOUTM
 #endif
+	};
+
+	/* I2S Audio on SSI-0 */
+	ssi0_pins: ssi0 {
+		pinmux = <RZA2_PINMUX(PORT9, 6, 5)>,	/* SSIBCK0 */
+			 <RZA2_PINMUX(PORT9, 5, 5)>,	/* SSILRCK0 */
+			 <RZA2_PINMUX(PORT9, 4, 5)>,	/* SSITxD0 */
+			 <RZA2_PINMUX(PORT9, 3, 5)>,	/* SSIRxD0 */
+			 <RZA2_PINMUX(PORT6, 4, 4)>;	/* AUDIO_CLK */
 	};
 };
 
@@ -746,8 +762,8 @@
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0_pins>;
-	dmas = 	<&dma0 RZADMA_SLAVE_RSPI0_TX>,
-			<&dma0 RZADMA_SLAVE_RSPI0_RX>;
+	dmas = 	<&dma0 RZADMA_RSPI0_TX>,
+			<&dma0 RZADMA_RSPI0_RX>;
 	dma-names = "tx", "rx";
 	status = "okay";
 
@@ -766,18 +782,104 @@
 };
 #endif
 
+/* ================ AUDIO EXAMPLE ================ */
+#if 1   /* AUDIO EXAMPLE */
+	/* Requires SW6-2 to be 'OFF' */
+
+/* DMA Configuration */
 &dma0  {
-		/*slave id for another device*/
-	slave_id=< RZADMA_SLAVE_RSPI0_TX
-			   RZADMA_SLAVE_RSPI0_RX>;
-		/* address of slave device*/
-	addr=< 0xe800c804
-		   0xe800c804>;
-		/*channel config (chcfg) for slave device, first for RSPI0_TX*/
-	chcfg=<	0x1 0x0 0x1 0x1 0x2 0x0 0x0 0x0	/*.reqd .loen .hien .lvl .am .sds .dds .tm*/
-			0x0 0x0 0x1 0x1 0x2 0x0 0x0 0x0>;
-		/*dmas for slave device, first for RSPI0_TX*/
-	dmars=<	0x1 0xb5 /*.rid .mid*/
-			0x2 0xb5>;
+	/* Assign Slave IDs */
+	slave_id = <RZADMA_RSPI0_TX
+		    RZADMA_RSPI0_RX
+		    RZADMA_SSI0_TX
+		    RZADMA_SSI0_RX>;
+	/* Address of data source/destination */
+	addr = <0xe800c804	/* SPDR_0 */
+		0xe800c804	/* SPDR_0 */
+		0xe8048018	/* SSIFTDR_0 */
+		0xe804801c	/* SSIFRDR_0 */
+		>;
+	/* Channel Configuration Register (CHCFG) for slave device */
+	/* .reqd .loen .hien .lvl .am .sds .dds .tm */
+	chcfg = <0x1 0x0 0x1 0x1 0x2 0x0 0x0 0x0	/* RSPI0_TX (req sig=SPDR0) */
+		 0x0 0x0 0x1 0x1 0x2 0x0 0x0 0x0	/* RSPI0_RX (req sig=SPDR0) */
+		 0x1 0x0 0x1 0x0 0x2 0x1 0x1 0x0	/* SSI ch0 TX (req sig=SSIFTDR_0) */
+		 0x0 0x0 0x1 0x0 0x2 0x1 0x1 0x0	/* SSI ch0 RX (req sig=SSIFRDR_0) */
+		 >;
+	/* DMARS for slave device */
+	/* .rid .mid */
+	dmars = <0x1 0xb5	/* RSPI0_TX */
+		 0x2 0xb5	/* RSPI0_RX */
+		 0x1 0x9c	/* SSI ch0 TX */
+		 0x2 0x9c	/* SSI ch0 RX */
+		 >;
 };
 
+/* Audio codec (control) is connected to RSPI-0 */
+&spi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spi0_pins>;
+	status = "okay";
+
+#if 1 /* DMA */
+	/* DMA is not required for the SPI interface, and is actually
+	 * not used because the transfers are so small. It is being
+	 * used here just as another example of using DMA on multiple
+	 * peripherals */
+	dmas = <&dma0 RZADMA_RSPI0_TX>,
+	       <&dma0 RZADMA_RSPI0_RX>;
+	dma-names = "tx", "rx";
+#endif
+
+	snd_codec: codec@0 {
+		#sound-dai-cells = <0>;
+		compatible = "wlf,wm8978";
+		reg = <0>;
+		spi-max-frequency = <1000000>;	/* ~5 MHz */
+	};
+};
+
+/* Audio codec (I2S data) is connected to SSI-0 */
+&ssi0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ssi0_pins>;
+	status = "okay";
+	audio_clk = <11289600>;
+
+#if 1 /* DMA */
+	/* The SSI driver can be using without DMA, but it is not
+	 * recommended because when the system is loaded, you will get
+	 * many buffer underruns/overruns. */
+	dmas = <&dma0 RZADMA_SSI0_TX>,
+	       <&dma0 RZADMA_SSI0_RX>;
+	dma-names = "tx", "rx";
+#endif
+};
+
+/ {
+	/* Simple Audio Card (must be a root node) */
+	snd_rza2mevb: sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&cpu_dai>;
+		simple-audio-card,frame-master = <&cpu_dai>;
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,widgets =
+			"Microphone", "Microphone Jack",	/* "MIC" is really an AUX input */
+			"Headphone", "Headphone Jack";		/* "HP" output */
+		simple-audio-card,routing =
+			"L2", "Microphone Jack",	/* (L2) Left Input Mixer */
+			"R2", "Microphone Jack",	/* (R2) Right Input Mixer */
+			"Headphone Jack", "LHP",	/* (LOUT1) Left Headphone Out */
+			"Headphone Jack", "RHP";	/* (ROUT1) Right Headphone Out */
+
+		cpu_dai: simple-audio-card,cpu {
+			sound-dai = <&ssi0>;
+		};
+
+		codec_dai: simple-audio-card,codec {
+			sound-dai = <&snd_codec>;
+		};
+	};
+};
+#endif /* AUDIO EXAMPLE */

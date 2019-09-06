@@ -44,6 +44,24 @@ config SND_SOC_RCAR
 	help
 	  This option enables R-Car SRU/SCU/SSIU/SSI sound support
 
+config SND_SOC_RZA
+	bool "RZ/A series ASoC sound support"
+	depends on ARCH_R7S9210 || ARCH_R7S72100
+
+config SND_SOC_RZA_SSI
+	tristate "Simple-audio-card driver using SSIF"
+	depends on SND_SOC_RZA
+	select SND_SIMPLE_CARD
+	select DMADEVICES
+	select RZA_DMA
+	help
+	  This option enables ASoC sound support for the RZ/A MPUs.
+	  The simple-audio-card driver and the RZ/A built-in serial
+	  sound interface (SSIF) driver are used.
+	  You also need to specify the codec to connect.
+	  Say Y here if you have enabled, otherwise say N.
+	  To compile this driver as a module, say M.
+
 ##
 ## Boards
 ##
