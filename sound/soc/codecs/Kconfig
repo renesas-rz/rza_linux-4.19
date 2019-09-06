@@ -218,6 +218,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_WM8971 if I2C
 	select SND_SOC_WM8974 if I2C
 	select SND_SOC_WM8978 if I2C
+	select SND_SOC_WM8978_SPI if SPI_MASTER
 	select SND_SOC_WM8983 if SND_SOC_I2C_AND_SPI
 	select SND_SOC_WM8985 if SND_SOC_I2C_AND_SPI
 	select SND_SOC_WM8988 if SND_SOC_I2C_AND_SPI
@@ -1204,8 +1205,12 @@ config SND_SOC_WM8974
 	depends on I2C
 
 config SND_SOC_WM8978
-	tristate "Wolfson Microelectronics WM8978 codec"
+	tristate "Wolfson Microelectronics WM8978 codec (I2C)"
 	depends on I2C
+
+config SND_SOC_WM8978_SPI
+	tristate "Wolfson Microelectronics WM8978 codec (SPI)"
+	depends on SPI_MASTER
 
 config SND_SOC_WM8983
 	tristate
