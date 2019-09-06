@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Renesas RZA DMA Engine support
  *
@@ -9,12 +10,16 @@
  * Copyright 2010 Sascha Hauer, Pengutronix <s.hauer@pengutronix.de>
  * Copyright (C) 2009 Nobuhiro Iwamatsu <iwamatsu.nobuhiro@renesas.com>
  * Copyright (C) 2007 Freescale Semiconductor, Inc. All rights reserved.
- *
- * SPDX-License-Identifier: GPL-2.0
- *
  */
-#define	END_DMA_WITH_LE		0	/* 1: LE=1, 0: LV=0 */
-#define	IRQ_EACH_TX_WITH_DEM	1	/* 1: DEM=0, 0: DIM=0 */
+
+/* TODO: Integrate with rza-dma.c */
+#define END_DMA_WITH_LE         0       /* 1: LE=1, 0: LV=0 */
+#define IRQ_EACH_TX_WITH_DEM    1       /* 1: DEM=0, 0: DIM=0 */
+#define DMAC_UDC                0       /* DMAC for USBHS USC */
+#define DMAC_SYS_RZA1           1       /* DMAC for RZ/A SYS */
+#define DMAC_SYS_RZA2           1       /* DMAC for RZ/A SYS */
+#define DMAC_SYS		(DMAC_SYS_RZA1 || DMAC_SYS_RZA2)
+#define RZA2M_WA_1		1
 
 #include <linux/init.h>
 #include <linux/types.h>
@@ -30,16 +35,13 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_dma.h>
-
-#include <asm/irq.h>
-
-#include "dmaengine.h"
-#define RZADMA_MAX_CHAN_DESCRIPTORS	16
-
 #include <linux/scatterlist.h>
 #include <linux/device.h>
 #include <linux/dmaengine.h>
+#include <asm/irq.h>
+#include "dmaengine.h"
 
+#define RZADMA_MAX_CHAN_DESCRIPTORS	16
 
 /* Call the callback function from within a thread instead of a standard tasklet.
  * The reason is because of upstream commit
@@ -51,24 +53,176 @@
  */
 #define THREADED_CALLBACK
 
-static void rzadma_tasklet(unsigned long data);	//asdf
+/* Register offset */
+#define CHSTAT                  0x0024          /* channel register set */
+#define CHCTRL                  0x0028
+#define CHCFG                   0x002c
+#define CHITVL                  0x0030
+#define CHEXT                   0x0034
+#define NXLA                    0x0038
+#define CRLA                    0x003c
 
-/* DMA slave IDs */
-enum {
-	RZADMA_SLAVE_PCM_MEM_SSI0 = 1,	/* DMA0		MEM->(DMA0)->SSI0 */
-	RZADMA_SLAVE_PCM_MEM_SRC1,		/* DMA1		MEM->(DMA1)->FFD0_1->SRC1->SSI0 */
-	RZADMA_SLAVE_PCM_SSI0_MEM,		/* DMA2		SSI0->(DMA2)->MEM */
-	RZADMA_SLAVE_PCM_SRC0_MEM,		/* DMA3		SSI0->SRC0->FFU0_0->(DMA3)->MEM */
-	RZADMA_SLAVE_PCM_MAX,
-	RZADMA_SLAVE_SDHI0_TX,
-	RZADMA_SLAVE_SDHI0_RX,
-	RZADMA_SLAVE_SDHI1_TX,
-	RZADMA_SLAVE_SDHI1_RX,
-	RZADMA_SLAVE_MMCIF_TX,
-	RZADMA_SLAVE_MMCIF_RX,
-	RZADMA_SLAVE_RSPI0_TX,			/*Slave of RZ/A2M*/
-	RZADMA_SLAVE_RSPI0_RX,			/*Slave of RZ/A2M*/
-};
+#if DMAC_UDC
+#define SCNT                    0x0000          /* skip register set */
+#define SSKP                    0x0004
+#define DCNT                    0x0008
+#define DSKP                    0x000c
+#endif
+
+#define DCTRL                   0x0000          /* DMA register set */
+#if DMAC_UDC
+#define DSCITVL                 0x0004
+#endif
+#define DSTAT_EN                0x0010
+#define DSTAT_ER                0x0014
+#define DSTAT_END               0x0018
+#define DSTAT_TC                0x001c
+#define DSTAT_SUS               0x0020
+
+#define EACH_CHANNEL_OFFSET             0x0040
+#define CHANNEL_0_7_OFFSET              0x0000
+#define CHANNEL_0_7_COMMON_BASE         0x0300
+#define CHANNEL_8_15_OFFSET             0x0400
+#define CHANNEL_8_15_COMMON_BASE        0x0700
+#if DMAC_UDC
+#define EACH_SKIP_OFFSET                0x0020
+#define CHANNEL_0_7_SKIP_BASE           0x0200
+#endif
+
+/* Register bit */
+/* CHSTAT */
+#if DMAC_UDC
+#define CHSTAT_DNUM(x)          (((x) & 0xff) << 24)
+#define CHSTAT_SWPRQ            (0x1 << 18)
+#define CHSTAT_DMARQM           (0x1 << 17)
+#endif
+#define CHSTAT_INTMSK           (0x1 << 16)     /* INTM */
+#define CHSTAT_MODE             (0x1 << 11)
+#define CHSTAT_DER              (0x1 << 10)
+#define CHSTAT_DW               (0x1 << 9)
+#define CHSTAT_DL               (0x1 << 8)
+#define CHSTAT_SR               (0x1 << 7)
+#define CHSTAT_TC               (0x1 << 6)
+#define CHSTAT_END              (0x1 << 5)
+#define CHSTAT_ER               (0x1 << 4)
+#define CHSTAT_SUS              (0x1 << 3)
+#define CHSTAT_TACT             (0x1 << 2)
+#define CHSTAT_RQST             (0x1 << 1)
+#define CHSTAT_EN               (0x1 << 0)
+
+/* CHCTRL */
+#if DMAC_UDC
+#define CHCTRL_CLRDMARQM        (0x1 << 19)
+#define CHCTRL_SETDMARQM        (0x1 << 18)
+#define CHCTRL_SETSSWPRQ        (0x1 << 14)
+#define CHCTRL_SETREN           (0x1 << 12)
+#define CHCTRL_CLRDER           (0x1 << 7)
+#endif
+#define CHCTRL_CLRINTMSK        (0x1 << 17)     /* CLRINTM */
+#define CHCTRL_SETINTMSK        (0x1 << 16)     /* SETINTM */
+#define CHCTRL_CLRSUS           (0x1 << 9)
+#define CHCTRL_SETSUS           (0x1 << 8)
+#define CHCTRL_CLRTC            (0x1 << 6)
+#define CHCTRL_CLREND           (0x1 << 5)
+#define CHCTRL_CLRRQ            (0x1 << 4)
+#define CHCTRL_SWRST            (0x1 << 3)
+#define CHCTRL_STG              (0x1 << 2)
+#define CHCTRL_CLREN            (0x1 << 1)
+#define CHCTRL_SETEN            (0x1 << 0)
+#define CHCTRL_DEFAULT  (CHCTRL_CLRINTMSK | \
+			CHCTRL_CLRSUS | \
+			CHCTRL_CLRTC | \
+			CHCTRL_CLREND | \
+			CHCTRL_CLRRQ | \
+			CHCTRL_SWRST | \
+			CHCTRL_CLREN)
+
+/* CHCFG */
+#if DMAC_UDC
+#define CHCFG_DIM               (0x1 << 26)
+#define CHCFG_TCM               (0x1 << 25)
+#define CHCFG_WONLY             (0x1 << 23)
+#define CHCFG_DRRP              (0x1 << 11)
+#endif
+#define CHCFG_DMS               (0x1 << 31)
+#define CHCFG_REN               (0x1 << 30)
+#define CHCFG_RSW               (0x1 << 29)
+#define CHCFG_RSEL              (0x1 << 28)
+#define CHCFG_SBE               (0x1 << 27)
+#define CHCFG_DEM               (0x1 << 24)
+#define CHCFG_TM                (0x1 << 22)
+#define CHCFG_DAD               (0x1 << 21)
+#define CHCFG_SAD               (0x1 << 20)
+#define CHCFG_DDS(x)            (((x) & 0xf) << 16)
+#define CHCFG_SDS(x)            (((x) & 0xf) << 12)
+#define CHCFG_AM(x)             (((x) & 0x7) << 8)
+#define CHCFG_LVL               (0x1 << 6)
+#define CHCFG_HIEN              (0x1 << 5)
+#define CHCFG_LOEN              (0x1 << 4)
+#define CHCFG_REQD              (0x1 << 3)
+#define CHCFG_SEL(x)            (((x) & 0x7) << 0)
+
+/* CHITVL */
+#define CHITVL_ITVL(x)          (((x) & 0xffff) << 0)
+
+/* CHEXT */
+#if DMAC_SYS
+#define CHEXT_DPR(x)            (((x) & 0xf) << 8)
+#define CHEXT_SPR(x)            (((x) & 0xf) << 0)
+#endif
+#if DMAC_UDC
+#define CHEXT_DCA(x)            (((x) & 0xf) << 12)
+#define CHEXT_DPR(x)            (((x) & 0x7) << 8)
+#define CHEXT_SCA(x)            (((x) & 0xf) << 4)
+#define CHEXT_SPR(x)            (((x) & 0x7) << 0)
+#endif
+
+/* DCTRL */
+#if DMAC_SYS
+#define DCTRL_LWCA(x)           (((x) & 0xf) << 28)
+#define DCTRL_LDCA(x)           (((x) & 0xf) << 20)
+#endif
+#define DCTRL_LWPR(x)           (((x) & 0x7) << 24)
+#define DCTRL_LDPR(x)           (((x) & 0x7) << 16)
+#if defined(RZA2M_WA_1)
+#define DCTRL_LVINT             (0x0 << 1)      /* TODO: asdf */
+#else
+#define DCTRL_LVINT             (0x1 << 1)
+#endif
+#define DCTRL_PR                (0x1 << 0)
+#define DCTRL_DEFAULT           (DCTRL_LVINT | DCTRL_PR)
+
+/* DSCITVL */
+#if DMAC_UDC
+#define DSCITVL_DITVL(x)        (((x) & 0xff) << 8)
+#endif
+
+/* DSTAT_EN, DSTAT_ER, DSTAT_END, DSTAT_TC, DSTAT_SUS */
+#define DSTAT_EN_CH(ch)         (0x1 << ((ch) & 0x7))
+#define DSTAT_ER_CH(ch)         (0x1 << ((ch) & 0x7))
+#define DSTAT_END_CH(ch)        (0x1 << ((ch) & 0x7))
+#define DSTAT_TC_CH(ch)         (0x1 << ((ch) & 0x7))
+#define DSTAT_SUS_CH(ch)        (0x1 << ((ch) & 0x7))
+
+/* DMARS */
+#define DMARS_RID(x, ch)        (((x) & 0x3) << (16 * (ch & 0x1)))
+#define DMARS_MID(x, ch)        (((x) & 0xff) << (16 * (ch & 0x1)))
+
+/* LINK MODE DESCRIPTOR */
+#if DMAC_UDC
+#define HEADER_DSCFM(x) (((x) & 0xf) << 28)
+#define HEADER_WBD      (0x1 << 26)
+#define HEADER_LE       (0x1 << 25)
+#define HEADER_LV       (0x1 << 24)
+#define HEADER_D        (0x1 << 23)
+#else
+#define HEADER_DIM      (0x1 << 3)
+#define HEADER_WBD      (0x1 << 2)
+#define HEADER_LE       (0x1 << 1)
+#define HEADER_LV       (0x1 << 0)
+#endif
+
+static void rzadma_tasklet(unsigned long data);	//asdf
 
 union chcfg_reg {
 	u32	v;
@@ -128,87 +282,9 @@ struct rza_dma_slave_config {
 /* Static array to hold our slaves */
 // TODO: move into driver data structure
 static struct rza_dma_slave_config rza_dma_slaves[20];
-
-/* set the offset of regs */
-#define	CHSTAT	0x0024
-#define CHCTRL	0x0028
-#define	CHCFG	0x002c
-#define	CHITVL	0x0030
-#define	CHEXT	0x0034
-#define NXLA	0x0038
-#define	CRLA	0x003c
-
-#define	DCTRL		0x0000
-#define	DSTAT_EN	0x0010
-#define	DSTAT_ER	0x0014
-#define	DSTAT_END	0x0018
-#define	DSTAT_TC	0x001c
-#define	DSTAT_SUS	0x0020
-
-#define	EACH_CHANNEL_OFFSET		0x0040
-#define	CHANNEL_0_7_OFFSET		0x0000
-#define	CHANNEL_0_7_COMMON_BASE		0x0300
-#define CHANNEL_8_15_OFFSET		0x0400
-#define	CHANNEL_8_15_COMMON_BASE	0x0700
-
-/* set bit filds */
-/* CHSTAT */
-#define	CHSTAT_TC	(0x1 << 6)
-#define CHSTAT_END	(0x1 << 5)
-#define CHSTAT_ER	(0x1 << 4)
-#define CHSTAT_EN	(0x1 << 0)
-
-/* CHCTRL */
-#define CHCTRL_CLRINTMSK	(0x1 << 17)
-#define	CHCTRL_SETINTMSK	(0x1 << 16)
-#define	CHCTRL_CLRSUS		(0x1 << 9)
-#define	CHCTRL_SETSUS		(0x1 << 8)
-#define CHCTRL_CLRTC		(0x1 << 6)
-#define	CHCTRL_CLREND		(0x1 << 5)
-#define	CHCTRL_CLRRQ		(0x1 << 4)
-#define	CHCTRL_SWRST		(0x1 << 3)
-#define	CHCTRL_STG		(0x1 << 2)
-#define	CHCTRL_CLREN		(0x1 << 1)
-#define	CHCTRL_SETEN		(0x1 << 0)
-#define	CHCTRL_DEFAULT	(CHCTRL_CLRINTMSK | \
-			CHCTRL_CLRSUS | \
-			CHCTRL_CLRTC | \
-			CHCTRL_CLREND | \
-			CHCTRL_CLRRQ | \
-			CHCTRL_SWRST | \
-			CHCTRL_CLREN)
-
-/* CHCFG */
-#define	CHCFG_DMS		(0x1 << 31)
-#define	CHCFG_DEM		(0x1 << 24)
-#define	CHCFG_DAD		(0x1 << 21)
-#define	CHCFG_SAD		(0x1 << 20)
-#define	CHCFG_8BIT		(0x00)
-#define	CHCFG_16BIT		(0x01)
-#define	CHCFG_32BIT		(0x02)
-#define	CHCFG_64BIT		(0x03)
-#define CHCFG_128BIT		(0x04)
-#define	CHCFG_256BIT		(0x05)
-#define	CHCFG_512BIT		(0x06)
-#define	CHCFG_1024BIT		(0x07)
-#define	CHCFG_SEL(bits)		((bits & 0x07) << 0)
-
-/* DCTRL */
-#define	DCTRL_LVINT		(0x1 << 1)
-#define	DCTRL_PR		(0x1 << 0)
-#define DCTRL_DEFAULT		(DCTRL_LVINT | DCTRL_PR)
-
-/* DMARS */
-#define	DMARS_RID(bit)		(bit << 0)
-#define	DMARS_MID(bit)		(bit << 2)
-
-/* LINK MODE DESCRIPTOR */
-#define	HEADER_DIM	(0x1 << 3)
-#define	HEADER_WBD	(0x1 << 2)
-#define	HEADER_LE	(0x1 << 1)
-#define	HEADER_LV	(0x1 << 0)
-
 #define to_rzadma_chan(c) container_of(c, struct dmac_channel, chan)
+
+static struct platform_driver rzadma_driver;
 
 enum  rzadma_prep_type {
 	RZADMA_DESC_MEMCPY,
@@ -259,7 +335,7 @@ struct dmac_channel {
 	struct dma_async_tx_descriptor	desc;
 	enum dma_status			status;
 
-	const struct rza_dma_slave_config	*slave;
+	struct rza_dma_slave_config	*config;
 	void __iomem			*ch_base;
 	void __iomem			*ch_cmn_base;
 	struct {
@@ -289,8 +365,10 @@ struct rzadma_engine {
 	spinlock_t			lock;		/* unused now */
 	struct dmac_channel		*channel;
 	unsigned int			n_channels;
-	const struct rza_dma_slave_config *slave;
+//	struct rza_dma_slave_config	*slave;
+	struct rza_dma_slave_config	*configs;
 	int				slave_num;
+	bool				has_dmars;
 };
 
 static void rzadma_writel(struct rzadma_engine *rzadma, unsigned val,
@@ -518,7 +596,7 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 	struct dmac_channel *channel = to_rzadma_chan(chan);
 	struct rzadma_engine *rzadma = channel->rzadma;
 	struct lmdesc *lmdesc;
-	const struct rza_dma_slave_config *slave = channel->slave;
+	const struct rza_dma_slave_config *config = channel->config;
 	struct scatterlist *sg, *sgl = d->sg;
 	unsigned int i, sg_len = d->sgcount;
 	unsigned long flags;
@@ -527,7 +605,7 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 	
 	dev_dbg(rzadma->dev, "%s called\n", __func__);
 
-	chcfg = channel->slave->chcfg.v | (CHCFG_SEL(channel->nr) | CHCFG_DEM | CHCFG_DMS);
+	chcfg = channel->config->chcfg.v | (CHCFG_SEL(channel->nr) | CHCFG_DEM | CHCFG_DMS);
 
 	if (d->direction == DMA_DEV_TO_MEM)
 		chcfg |= CHCFG_SAD;	/* source address is fixed */
@@ -535,7 +613,7 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 		chcfg |= CHCFG_DAD;	/* distation address is fixed */
 
 	channel->chcfg = chcfg;			/* save */
-	channel->per_address = slave->addr;	/* slave device address */
+	channel->per_address = config->addr;	/* slave device address */
 
 	raw_spin_lock_irqsave(&channel->lock, flags);
 
@@ -575,7 +653,7 @@ static void prepare_descs_for_slave_sg(struct dmac_desc *d)
 	channel->lmdesc.tail = lmdesc;
 
 	/* and set DMARS register */
-	dmars = channel->slave->dmars.v;
+	dmars = channel->config->dmars.v;
 	set_dmars_register(rzadma, channel->nr, dmars);
 
 	channel->chctrl = CHCTRL_SETEN;		/* always */
@@ -672,39 +750,39 @@ out:
 
 static int rzadma_config(struct dma_chan *chan, struct dma_slave_config *config)
 {
-	struct dmac_channel *rzadmac = to_rzadma_chan(chan);
+	struct dmac_channel *channel = to_rzadma_chan(chan);
 	if (config->direction == DMA_DEV_TO_MEM) {
-		rzadmac->per_address = config->src_addr;
-		rzadmac->word_size = config->src_addr_width;
+		channel->per_address = config->src_addr;
+		channel->word_size = config->src_addr_width;
 	} else {
-		rzadmac->per_address = config->dst_addr;
-		rzadmac->word_size = config->dst_addr_width;
+		channel->per_address = config->dst_addr;
+		channel->word_size = config->dst_addr_width;
 	}
 	return 0;
 }
 
 static int rzadma_terminate_all(struct dma_chan *chan)
 {
-	struct dmac_channel *rzadmac = to_rzadma_chan(chan);
-	struct rzadma_engine *rzadma = rzadmac->rzadma;
+	struct dmac_channel *channel = to_rzadma_chan(chan);
+	struct rzadma_engine *rzadma = channel->rzadma;
 	unsigned long flags;
-	rzadma_disable_hw(rzadmac);
+	rzadma_disable_hw(channel);
 	raw_spin_lock_irqsave(&rzadma->lock, flags);
-	list_splice_tail_init(&rzadmac->ld_active, &rzadmac->ld_free);
-	list_splice_tail_init(&rzadmac->ld_queue, &rzadmac->ld_free);
+	list_splice_tail_init(&channel->ld_active, &channel->ld_free);
+	list_splice_tail_init(&channel->ld_queue, &channel->ld_free);
 	raw_spin_unlock_irqrestore(&rzadma->lock, flags);
 	return 0;
 }
 
-static const struct rza_dma_slave_config *dma_find_slave(
-		const struct rza_dma_slave_config *slave,
+static struct rza_dma_slave_config *dma_find_slave(
+		struct rza_dma_slave_config *configs,
 		int slave_num,
 		int slave_id)
 {
 	int i;
 
 	for (i = 0; i < slave_num; i++) {
-		const struct rza_dma_slave_config *t = &slave[i];
+		struct rza_dma_slave_config *t = &configs[i];
 
 		if (slave_id == t->slave_id)
 			return t;
@@ -717,19 +795,24 @@ bool rzadma_chan_filter(struct dma_chan *chan, void *arg)
 {
 	struct dmac_channel *channel = to_rzadma_chan(chan);
 	struct rzadma_engine *rzadma = channel->rzadma;
-	const struct rza_dma_slave_config *slave = rzadma->slave;
-	const struct rza_dma_slave_config *hit;
+	struct rza_dma_slave_config *configs = rzadma->configs;
+	struct rza_dma_slave_config *hit;
 	int slave_num = rzadma->slave_num;
 	int slave_id = (int)arg;
-
 	struct of_phandle_args *dma_spec = arg;
+
+#if 0
+	if (chan->device->dev->driver != &rzadma_driver.driver)
+		return false;
+#endif
 	slave_id = dma_spec->args[0];
 
-	hit = dma_find_slave(slave, slave_num, slave_id);
+	hit = dma_find_slave(configs, slave_num, slave_id);
 	if (hit) {
-		channel->slave = hit;
+		channel->config = hit;
 		return true;
 	}
+
 	return false;
 }
 EXPORT_SYMBOL(rzadma_chan_filter);
@@ -762,16 +845,16 @@ static int rzadma_alloc_chan_resources(struct dma_chan *chan)
 {
 	struct dmac_channel *channel = to_rzadma_chan(chan);
 	struct rzadma_engine *rzadma = channel->rzadma;
-	const struct rza_dma_slave_config *slave = rzadma->slave;
-	const struct rza_dma_slave_config *hit;
+	struct rza_dma_slave_config *configs = rzadma->configs;
+	struct rza_dma_slave_config *hit;
 	int slave_num = rzadma->slave_num;
 	int *slave_id = chan->private;
 
 	if (slave_id) {
-		hit = dma_find_slave(slave, slave_num, *slave_id);
+		hit = dma_find_slave(configs, slave_num, *slave_id);
 		if (!hit)
 			return -ENODEV;
-		channel->slave = hit;
+		channel->config = hit;
 	}
 
 	while (channel->descs_allocated < RZADMA_MAX_CHAN_DESCRIPTORS) {
@@ -946,7 +1029,6 @@ static int rzadma_parse_of(struct device *dev, struct rzadma_engine *rzadma)
 	int i = 0;
 	int n_slaves;
 	int ret;
-
 	struct device_node *np = dev->of_node;
 
 	ret = of_property_read_u32(np, "dma-channels", &rzadma->n_channels);
@@ -1002,26 +1084,21 @@ static int rzadma_parse_of(struct device *dev, struct rzadma_engine *rzadma)
 		rza_dma_slaves[i].dmars.mid	= dmars[i*2+1];
 	}
 
-	rzadma->slave = rza_dma_slaves;
+	rzadma->configs = rza_dma_slaves;
 	rzadma->slave_num = n_slaves;
 
 	return 0;
 }
 
-const char irqnames[16][16] = {
-"rza-dma: ch0", "rza-dma: ch1", "rza-dma: ch2", "rza-dma: ch3", "rza-dma: ch4",
-"rza-dma: ch5", "rza-dma: ch6", "rza-dma: ch7", "rza-dma: ch8", "rza-dma: ch9",
-"rza-dma: ch10", "rza-dma: ch11", "rza-dma: ch12", "rza-dma: ch13", "rza-dma: ch14",
-"rza-dma: ch15" };
 static int rzadma_probe(struct platform_device *pdev)
 {
 	struct rzadma_engine *rzadma;
 	int channel_num;
 	struct resource *mem;
-	char *irqname;
 	int ret, i;
 	int irq;
-	char pdev_irqname[50];
+//	char *irqname;
+//	char pdev_irqname[50];
 
 	rzadma = devm_kzalloc(&pdev->dev, sizeof(*rzadma), GFP_KERNEL);
 	if (!rzadma)
@@ -1041,33 +1118,15 @@ static int rzadma_probe(struct platform_device *pdev)
 	if (IS_ERR(rzadma->base))
 		return PTR_ERR(rzadma->base);
 
+	rzadma->has_dmars = false;
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	rzadma->ext_base = devm_ioremap_resource(&pdev->dev, mem);
-	if (IS_ERR(rzadma->ext_base))
-		return PTR_ERR(rzadma->ext_base);
-
-	/* Register interrupt handler for error */
-	irq = platform_get_irq_byname(pdev, "error");
-	if (irq < 0) {
-		dev_err(&pdev->dev, "no error IRQ specified\n");
-		return -ENODEV;
-	}
-
-//	irqname = devm_kasprintf(&pdev->dev, GFP_KERNEL, "%s:error",
-//				 dev_name(rzadma->dev));
-//devm_kasprintf causes crash
-	irqname = "rza-dma: error";
-
-	if (!irqname)
-		return -ENOMEM;
-
-	ret = devm_request_irq(&pdev->dev, irq, rzadma_irq_handler, 0,
-			       irqname, rzadma);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to request IRQ %u (%d)\n",
-			irq, ret);
-		return ret;
-	}
+	if (mem) {
+		rzadma->ext_base = devm_ioremap_resource(&pdev->dev, mem);
+		if (IS_ERR(rzadma->ext_base))
+			return PTR_ERR(rzadma->ext_base);
+		rzadma->has_dmars = true;
+	} else
+		rzadma->ext_base = NULL;
 
 	INIT_LIST_HEAD(&rzadma->dma_device.channels);
 	dma_cap_set(DMA_SLAVE, rzadma->dma_device.cap_mask);
@@ -1086,8 +1145,9 @@ static int rzadma_probe(struct platform_device *pdev)
 		channel->rzadma = rzadma;
 
 		/* Request the channel interrupt. */
-		sprintf(pdev_irqname, "ch%u", i);
-		irq = platform_get_irq_byname(pdev, pdev_irqname);
+//		sprintf(pdev_irqname, "ch%u", i);
+//		irq = platform_get_irq_byname(pdev, pdev_irqname);
+		irq = platform_get_irq(pdev, i);
 		if (irq < 0) {
 			dev_err(rzadma->dev, "no IRQ specified for channel %u\n", i);
 			return -ENODEV;
@@ -1097,20 +1157,16 @@ static int rzadma_probe(struct platform_device *pdev)
 		if (i == 0)
 			rzadma->irq = irq;
 
-//		irqname = devm_kasprintf(&pdev->dev, GFP_KERNEL, "%s:%u",
-//					 dev_name(&pdev->dev), i);
-//devm_kasprintf causes crash
-		//irqname = "rza-dma: ch";
-
-		if (!irqname)
-			return -ENOMEM;
+//		if (!irqname)
+//			return -ENOMEM;
 
 #ifdef THREADED_CALLBACK
 		ret = devm_request_threaded_irq(&pdev->dev, irq, rzadma_irq_handler,
-				rzadma_irq_handler_thread, 0, irqnames[i], rzadma);
-				//rzadma_irq_handler_thread, 0, dev_name(&pdev->dev), rzadma);
+//				rzadma_irq_handler_thread, 0, irqnames[i], rzadma);
+				rzadma_irq_handler_thread, 0, dev_name(&pdev->dev), rzadma);
 #else
 		ret = devm_request_irq(&pdev->dev, irq, rzadma_irq_handler, 0,
+//				irqnames[i], rzadma);
 				dev_name(&pdev->dev), rzadma);
 #endif
 		if (ret) {
@@ -1159,14 +1215,36 @@ static int rzadma_probe(struct platform_device *pdev)
 		rzadma_ch_writel(channel, CHCTRL_DEFAULT, CHCTRL, 1);
 	}
 
+	/* Register interrupt handler for error */
+//	irq = platform_get_irq_byname(pdev, "error");
+	irq = platform_get_irq(pdev, i);
+	if (irq < 0) {
+		dev_err(&pdev->dev, "no error IRQ specified\n");
+		return -ENODEV;
+	}
+
+//	irqname = "rza-dma: error";
+
+//	if (!irqname)
+//		return -ENOMEM;
+
+	ret = devm_request_irq(&pdev->dev, irq, rzadma_irq_handler, 0,
+			       dev_name(&pdev->dev), rzadma);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to request IRQ %u (%d)\n",
+			irq, ret);
+		return ret;
+	}
+
 	/* Register the DMAC as a DMA provider for DT. */
 	if (of_dma_controller_register(pdev->dev.of_node, rzadma_of_xlate,
 				       NULL) < 0 )
 		dev_err(&pdev->dev, "unable to register as provider provider for DT\n");
 
 	/* Initialize register for all channels */
-	rzadma_writel(rzadma, DCTRL_DEFAULT, CHANNEL_0_7_COMMON_BASE	+ DCTRL);
-	rzadma_writel(rzadma, DCTRL_DEFAULT, CHANNEL_8_15_COMMON_BASE + DCTRL);
+	rzadma_writel(rzadma, DCTRL_DEFAULT, CHANNEL_0_7_COMMON_BASE + DCTRL);
+	if (channel_num > 8)
+		rzadma_writel(rzadma, DCTRL_DEFAULT, CHANNEL_8_15_COMMON_BASE + DCTRL);
 
 	rzadma->dev = &pdev->dev;
 	rzadma->dma_device.dev = &pdev->dev;
@@ -1185,7 +1263,7 @@ static int rzadma_probe(struct platform_device *pdev)
 	rzadma->dma_device.copy_align = 0; /* Set copy_align to zero for net_dma_find_channel
 					     * func to run well. But it might cause problems.
 					     */
-	rzadma->dma_device.copy_align = 0;
+//	rzadma->dma_device.copy_align = 0;
 	rzadma->dma_device.dev->dma_parms = &rzadma->dma_parms;
 	dma_set_max_seg_size(rzadma->dma_device.dev, 0xffffff);
 
