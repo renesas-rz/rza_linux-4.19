@@ -9,6 +9,8 @@
 #include <linux/io.h>
 #include <linux/of_device.h>
 #include <linux/dmaengine.h>
+#include <linux/clk.h>
+#include <linux/pm_runtime.h>
 #include <sound/soc.h>
 
 /* SSIF/SSIF-2 REGISTER OFFSET */
@@ -113,6 +115,7 @@ struct ssi_priv {
 	struct platform_device *pdev;
 	struct device *dev;
 	const struct ssi_data *data;
+	struct clk *clk;
 
 	phys_addr_t phys;
 	int irq_int;		/* int_req */
@@ -972,6 +975,16 @@ static int ssi_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	/* Peripheral clock */
+	ssi->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(ssi->clk)) {
+		dev_err(&pdev->dev, "missing clock");
+		ret = PTR_ERR(ssi->clk);
+		goto exit_ssi_probe;
+	}
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+
 	ret = ssi_parse_of(pdev->dev.of_node, ssi);
 	if (ret < 0)
 		return ret;
@@ -1067,7 +1080,7 @@ exit_ssi_probe:
 		dma_release_channel(ssi->capture.dma_ch);
 		ssi->capture.dma_ch = NULL;
 	}
-
+	pm_runtime_disable(ssi->dev);
 	return ret;
 }
 
@@ -1086,6 +1099,9 @@ static int ssi_remove(struct platform_device *pdev)
 		dma_release_channel(ssi->capture.dma_ch);
 		ssi->capture.dma_ch = NULL;
 	}
+
+	pm_runtime_put(ssi->dev);
+	pm_runtime_disable(&pdev->dev);
 
 	return 0;
 }
