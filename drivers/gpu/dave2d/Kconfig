@@ -1,0 +1,5 @@
+config DAVE2D
+	tristate "TES D/AVE 2D Rendering Engine"
+	help
+	  TES D/AVE 2D driver
+	  This driver is provided by TES Electronic Solutions GmbH
