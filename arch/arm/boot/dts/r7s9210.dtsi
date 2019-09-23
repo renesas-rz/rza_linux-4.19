@@ -611,5 +611,16 @@
 			status = "disabled";
 			audio_clk = <0>;	/* Assign in DTS */
 		};
+
+		drw: gpu@e820a000 {
+			compatible = "tes,dave2d-1.0";
+			reg = <0xe820a000 0xec>;
+			interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_HIGH>;
+			//vidmem = <0x80200000 0x100000>;	/* to be filled in by board dts */
+			clocks = <&cpg CPG_MOD 76>;
+			power-domains = <&cpg>;
+
+			status = "disabled";
+		};
 	};
 };
