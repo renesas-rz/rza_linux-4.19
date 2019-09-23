@@ -57,15 +57,16 @@ struct vdc5fb_priv {
 	unsigned long flm_off;
 	unsigned long flm_num;
 	int fb_nofree;
-#if 0 /* interrupts not used */
+
 	/* irq */
 	struct {
 		int start;		/* start irq number */
 		int end;		/* end irq number, inclusive */
 		u32 mask[3];		/* curremnt irq mask */
 		char longname[VDC5FB_IRQ_SIZE][32];	/* ire name */
+		wait_queue_head_t	wait;
+		unsigned short irq_flag;
 	} irq;
-#endif
 
 	/* display */
 	struct fb_info *info;
@@ -122,7 +123,7 @@ static void vdc5fb_setbits(struct vdc5fb_priv *priv, int reg, u32 bits)
 #endif
 
 /* INTERRUPT HANDLING */
-#if 0 /* Interrupts are not used with this driver */
+/* Interrupts might not be used */
 static irqreturn_t vdc5fb_irq(int irq, void *data)
 {
 	struct vdc5fb_priv *priv = (struct vdc5fb_priv *)data;
@@ -133,6 +134,7 @@ static irqreturn_t vdc5fb_irq(int irq, void *data)
 	case S0_LO_VSYNC:	/* INT1 */
 	case S0_VSYNCERR:	/* INT2 */
 	case GR3_VLINE:		/* INT3 */
+		priv->irq.irq_flag ^= 1;
 	case S0_VFIELD:		/* INT4 */
 	case IV1_VBUFERR:	/* INT5 */
 	case IV3_VBUFERR:	/* INT6 */
@@ -163,6 +165,12 @@ static irqreturn_t vdc5fb_irq(int irq, void *data)
 		break;
 	}
 
+	/* Disable interrupts */
+	vdc5fb_write(priv, SYSCNT_INT4, 0);
+	vdc5fb_write(priv, SYSCNT_INT1, 0);
+
+	wake_up_interruptible(&priv->irq.wait);
+
 	return IRQ_HANDLED;
 }
 
@@ -179,9 +187,8 @@ static int vdc5fb_init_irqs(struct vdc5fb_priv *priv)
 		return error;
 
 	priv->irq.start = res->start;
-	priv->irq.end = res->end;
-	BUG_ON((priv->irq.end - priv->irq.start + 1) != VDC5FB_MAX_IRQS);
-
+	//priv->irq.end = res->end;
+	priv->irq.end = res->start + VDC5FB_MAX_IRQS - 1;
 	for (irq = 0; irq < VDC5FB_MAX_IRQS; irq++) {
 		snprintf(priv->irq.longname[irq],
 			sizeof(priv->irq.longname[0]), "%s: %s",
@@ -205,7 +212,6 @@ static void vdc5fb_deinit_irqs(struct vdc5fb_priv *priv)
 	for (irq = priv->irq.start; irq <= priv->irq.end; irq++)
 		free_irq(irq, priv);
 }
-#endif /* interrupts not used */
 
 /* For disabling the clocks */
 static void vdc5fb_deinit_clocks(struct vdc5fb_priv *priv)
@@ -256,6 +262,8 @@ static int vdc5fb_update_regs(struct vdc5fb_priv *priv,
 			udelay(1000);
 		} while (--timeout > 0);
 	/* wait for max. 100 ms... */
+	} else {
+		return 0;
 	}
 
 	/* Since not all VDC5 features are used, we can ignore some timeouts */
@@ -1360,7 +1368,7 @@ static int vdc5fb_ioctl(struct fb_info *info, unsigned int cmd,
 	case FBIOPUT_VSCREENINFO:	/* 0x01 */
 		break;
 
-	case FBIOPAN_DISPLAY:		/* 0x06 */
+	case FBIOPAN_DISPLAY:		/* 0x06 (see fb_ops.fb_pan_display) */
 		break;
 
 	case FBIOGETCMAP:		/* 0x04 */
@@ -1380,6 +1388,23 @@ static int vdc5fb_ioctl(struct fb_info *info, unsigned int cmd,
 	case FBIOPUT_MODEINFO:		/* 0x17 */
 	case FBIOGET_DISPINFO:		/* 0x18 */
 	case FBIO_WAITFORVSYNC:		/* 0x20 */
+		if (!priv->irq.start)
+			return -EINVAL;	/* no interrupts enabled */
+		{
+			unsigned short temp = priv->irq.irq_flag;
+
+			/* Enable only GR3_VLINE interrupt */
+			vdc5fb_write(priv, SYSCNT_INT4, 0x00001000);
+			vdc5fb_write(priv, SYSCNT_INT1, 0x00001000);
+
+			if (!wait_event_interruptible_timeout(priv->irq.wait,
+				temp != priv->irq.irq_flag, HZ*4)) {
+				pr_err("Vsync timeout");
+				return -ETIMEDOUT;
+			}
+			return 0;
+		}
+
 	/* Done by higher, NG (not supported) */
 	/* vdc5fb_ioctl is also called */
 		return -EINVAL;
@@ -1550,7 +1575,9 @@ static int vdc5fb_pan_display(struct fb_var_screeninfo *var,
 	/* Assume Graphics layer 2 */
 	vdc5fb_write(priv, GR2_FLM2, priv->fb_phys_addr + start);
 	tmp = (GR_IBUS_VEN | GR_P_VEN | GR_UPDATE);
-	vdc5fb_update_regs(priv, GR2_UPDATE, tmp, 1);
+
+	/* A FBIOPAN_DISPLAY call should not wait */
+	vdc5fb_update_regs(priv, GR2_UPDATE, tmp, 0);
 
 /*	pm_runtime_put_sync();	*/
 	return 0;
@@ -2044,6 +2071,9 @@ static int vdc5fb_probe(struct platform_device *pdev)
 		error = -ENOMEM;
 		goto error;
 	}
+
+	init_waitqueue_head(&priv->irq.wait);
+
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
 	priv->dev_name = dev_name(&pdev->dev);
@@ -2104,13 +2134,11 @@ static int vdc5fb_probe(struct platform_device *pdev)
 	}
 
 
-#if 0 /* Interrupts are not used with this driver */
+	/* Interrupts might not be used */
 	error = vdc5fb_init_irqs(priv);
 	if (error < 0) {
-		dev_err(&pdev->dev, "cannot init irqs\n");
-		goto error;
+		dev_info(&pdev->dev, "irqs not available\n");
 	}
-#endif
 
 	info = framebuffer_alloc(0, &pdev->dev);
 	if (!info) {
@@ -2362,9 +2390,7 @@ static int vdc5fb_remove(struct platform_device *pdev)
 
 	fb_destroy_modelist(&info->modelist);
 	framebuffer_release(info);
-#if 0 /* interrupts not used */
 	vdc5fb_deinit_irqs(priv);
-#endif
 	vdc5fb_deinit_clocks(priv);
 
 	kfree(priv);
