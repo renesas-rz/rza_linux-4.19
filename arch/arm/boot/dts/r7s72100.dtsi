@@ -815,7 +815,29 @@
 		      <0xfcff6000 0x00001000>,
 		      <0xfcff7a30 0x00000030>;
 		reg-names = "reg", "clut", "lvds";
-		/* interrupts = (are not used with this driver) */
+			interrupts = <GIC_SPI (75-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (76-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (77-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (78-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (79-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (80-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (81-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (82-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (83-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (84-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (85-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (86-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (87-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (88-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (89-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (90-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (91-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (92-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (93-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (94-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (95-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (96-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (97-32) IRQ_TYPE_LEVEL_HIGH>;
 		channel = <0>;
 		clocks = <&mstp9_clks R7S72100_CLK_VDC50>;
 		status = "disabled";
@@ -828,7 +850,29 @@
 		      <0xfcff6000 0x00001000>,
 		      <0xfcff7a30 0x00000030>;
 		reg-names = "reg", "clut", "lvds";
-		/* interrupts = (are not used with this driver) */
+			interrupts = <GIC_SPI (99-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (100-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (101-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (102-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (103-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (104-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (105-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (106-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (107-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (108-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (109-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (110-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (111-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (112-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (113-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (114-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (115-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (116-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (117-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (118-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (119-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (120-32) IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI (121-32) IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&mstp9_clks R7S72100_CLK_VDC51>;
 		channel = <1>;
 		status = "disabled";
