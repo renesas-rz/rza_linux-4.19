@@ -685,6 +685,38 @@
 };
 #endif /* LVDS */
 
+/* ========== D/AVE 2D Example ========== */
+/* Requires CONFIG_DAVE2D=y */
+# if 0
+&drw {
+	/* vidmem:
+	 * The D/AVE driver needs dedicated physical memory to hold things
+	 * like rendering command buffers.
+	 * Also, the memory defined by vidmem can be divided up and passed
+	 * to the user application to be used as graphics buffers.
+	 * See API functions d1_allocvidmem() and d1_freevidmem() in the
+	 * DAVE2D driver.
+	 *
+	 * Remember, if you enabled 'double_buffer' in the VDC6 driver,
+	 * twice as much memory will be allocated, so start your vidmem
+	 * after that area.
+	 *
+	 * Note, the size must be a multiple of 1MB */
+	vidmem = <0x80200000 0x100000>;
+
+	status = "okay";
+};
+
+&vdc6 {
+
+	/* Double Buffering. Reserves 2x memory space as frame buffer */
+	/* Use "ioctl(fb0_fd, FBIOPAN_DISPLAY, &var)" from application
+	 * space to change "var.yoffset=Y" where 'Y' is from 0 to var.yres
+	 */
+	double_buffer;	/* Uncomment for double buffering */
+};
+#endif
+
 /* ========== SPI Flash MTD File System Example ========== */
 #if 0
 
