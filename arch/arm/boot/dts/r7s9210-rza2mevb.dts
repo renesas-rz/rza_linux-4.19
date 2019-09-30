@@ -218,7 +218,7 @@
 			 <RZA2_PINMUX(PORTD, 7, 1)>;	/* RIIC3SDA */
 	};
 
-	/* RSPI ch3 (EEPROM) */
+	/* RSPI ch3 (EEPROM, Audio codec) */
 	spi0_pins: spi0 {
 		pinmux = <RZA2_PINMUX(PORT8, 5, 4)>,	/* MISO0 */
 			 <RZA2_PINMUX(PORT8, 6, 4)>,	/* MOSI0 */
@@ -815,8 +815,12 @@
 #endif
 
 /* ================ AUDIO EXAMPLE ================ */
-#if 1   /* AUDIO EXAMPLE */
+#ifndef MEM_SDRAM
 	/* Requires SW6-2 to be 'OFF' */
+
+	/* NOTE: The RSPI-0 channel to the codec is using the same pins
+	 * as the SDRAM A4,A6,A7 pins, so audio cannot be used at the
+	 * same time as SDRAM. */
 
 /* DMA Configuration */
 &dma0  {
