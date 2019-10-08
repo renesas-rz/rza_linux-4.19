@@ -28,6 +28,7 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 #include <video/of_display_timing.h>
 #include <video/of_videomode.h>
 #include <video/videomode.h>
@@ -2385,8 +2386,13 @@ static int vdc5fb_remove(struct platform_device *pdev)
 	if (priv->fb_nofree)
 		iounmap(priv->base);
 	else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+		dma_free_wc(&pdev->dev, info->fix.smem_len,
+			info->screen_base, info->fix.smem_start);
+#else
 		dma_free_writecombine(&pdev->dev, info->fix.smem_len,
 			info->screen_base, info->fix.smem_start);
+#endif
 
 	fb_destroy_modelist(&info->modelist);
 	framebuffer_release(info);
