@@ -566,6 +566,11 @@
 	panel_pixel_xres = <800>;	/* panel native resolution */
 	panel_pixel_yres = <480>;	/* panel native resolution */
 
+	/* If using the "RZ/A2M RGB -> HDMI Board" to connect directly
+	 * to a monitor, you might need to adjust the panel resolution
+	 * to 854 x 480. Please uncomment the line below.
+	 */
+	//panel_pixel_xres = <854>; panel_pixel_yres = <480>;	/* 854x480 */
 
 	/* See 'drivers/video/fbdev/renesas/vdc5fb.h' for valid choices
 	* for panel_icksel, panel_ocksel, and out_format */
