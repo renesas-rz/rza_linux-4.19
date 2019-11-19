@@ -520,6 +520,16 @@ config SPI_RSPI
 	help
 	  SPI driver for Renesas RSPI and QSPI blocks.
 
+config SPI_SPIBSC
+	tristate "Renesas SPIBSC controller for RZA1"
+	depends on ARCH_R7S72100
+	help
+	  SPI Bus space Controller (BSC), otherwise known as the
+	  Multi I/O Bus Controller in the hardware manual.
+	  This controller was designed for accessing QSPI flash devices.
+	  While the BSC supports dual SPI flash connections, this driver
+	  only supports a single SPI flash being connected.
+
 config SPI_QUP
 	tristate "Qualcomm SPI controller with QUP interface"
 	depends on ARCH_QCOM || (ARM && COMPILE_TEST)
