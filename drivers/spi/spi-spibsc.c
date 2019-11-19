@@ -604,8 +604,7 @@ static int spibsc_setup(struct spi_device *spi)
 	spibsc_write(sbsc, SSLDR, SSLDR_INIT);
 	spibsc_write(sbsc, SPBCR, SPBCR_INIT);
 
-//asdf
-	spibsc_write(sbsc, SPBCR, 0x0603); /* Slow Down Clock For Debugging */
+	//spibsc_write(sbsc, SPBCR, 0x0603); /* Slow Down Clock For Debugging */
 
 	return 0;
 }
