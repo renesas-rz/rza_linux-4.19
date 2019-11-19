@@ -765,7 +765,7 @@
 
 /* ========== SPIBSC (QSPI) Example ========== */
 #if 0
-/* Booted as uImage with a initramfs. (or with a USB Flash drive)
+/* Booted as uImage (rootfs is initramfs, USB Flash drive or SD card)
  *
  * * Requires:
  *   CONFIG_MTD=y
@@ -775,40 +775,42 @@
  * NOTE: When booting, do NOT leave the QSPI in XIP mode (ie, the 'qspi single' command
  *
  * When booting, you should see:
- *   spibsc 3fefa000.spi: JEDEC ID = 010220
- *   spibsc 3fefa000.spi: Quad Read enabled for Spansion
  *   m25p80 spi5.0: s25fl512s (65536 Kbytes)
  *   4 ofpart partitions found on MTD device spi5.0
  *   Creating 4 MTD partitions on "spi5.0":
  *   0x000000000000-0x000000080000 : "u-boot"
  *   0x000000080000-0x0000000c0000 : "env"
  *   0x0000000c0000-0x000000100000 : "dtb"
- *   0x000002000000-0x000002100000 : "spibsc-rootfs"
+ *   0x000002000000-0x000002100000 : "rootfs"
  *
  * After boot:
  * $ cat /proc/mtd
  * dev:    size   erasesize  name
- * mtd0: 00800000 04000000 "user"
- * mtd1: 00080000 00040000 "u-boot"
- * mtd2: 00040000 00040000 "env"
- * mtd3: 00040000 00040000 "dtb"
- * mtd4: 00100000 00040000 "spibsc-rootfs"
+ * mtd0: 00080000 00040000 "u-boot"
+ * mtd1: 00040000 00040000 "env"
+ * mtd2: 00040000 00040000 "dtb"
+ * mtd3: 01000000 00040000 "rootfs"
+ *
  *
  * You can do things like erase and mount a JFFS2 file system:
- * $ flash_eraseall -j /dev/mtd4
- * $ mount -t jffs2 /dev/mtdblock4 /mnt
+ * $ flash_eraseall -j /dev/mtd3
+ * $ mount -t jffs2 /dev/mtdblock3 /mnt
  * $ echo "hello" > /mnt/hello.txt
  * $ sync
  */
 / {
 	chosen {
-#if 0
-		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000              ";
-#else
-		bootargs = "ignore_loglevel earlyprintk earlycon=scif,0xE8008000 rootwait root=/dev/mmcblk0p1   ";
-#endif
+		//bootargs = "ignore_loglevel earlyprintk earlycon              "; // initramfs
+		bootargs = "ignore_loglevel earlycon rootwait root=/dev/mmcblk0p1   "; // SD card
+		//bootargs = "ignore_loglevel earlycon rootwait root=/dev/sda1   "; // USB Flash drive
 		stdout-path = "serial0:115200n8";
 	};
+};
+
+/* Delete our 'XIP QSPI' partitions. You would not have these for a real
+ * JFFS2 QSPI boot */
+/ {
+	/delete-node/ qspi@18000000;
 };
 
 &spibsc0 {
@@ -846,9 +848,9 @@
 				reg = <0x000C0000 0x40000>;
 				read-only;
 			};
-			partition@2000000 {
-				label = "spibsc-rootfs";
-				reg = <0x02000000 0x01000000>;	/* 16MB @ 32MB offset in SPI Flash */
+			partition@800000 {
+				label = "rootfs";
+				reg = <0x00800000 0x01000000>;	/* 16MB @ 8MB offset in SPI Flash */
 			};
 		};
 	};
