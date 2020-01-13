@@ -71,6 +71,8 @@
 		spi0 = &spi0;
 		spi1 = &spi1;
 		spi2 = &spi2;
+		rtc0 = &rtc0;
+		rtc1 = &rtc1;
 	};
 
 	chosen {
@@ -924,3 +926,23 @@
 	};
 };
 #endif /* AUDIO EXAMPLE */
+
+/* ========== RTC Example ========== */
+#if 0
+/* Requries:
+ *   CONFIG_RTC_DRV_RZA2M=y
+ *   CONFIG_RTC_HCTOSYS=y
+ *   CONFIG_RTC_HCTOSYS_DEVICE="rtc0"
+ *   CONFIG_RTC_INTF_DEV=y
+*/
+
+&rtc0 {
+	status = "okay";
+	//binary_cntmd = <1>;	/* Operate in custom Binary Count mode */
+};
+
+&rtc1 {
+	status = "okay";
+	//binary_cntmd = <1>;	/* Operate in custom Binary Count mode */
+};
+#endif
