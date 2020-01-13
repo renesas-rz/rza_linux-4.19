@@ -1361,6 +1361,13 @@ config RTC_DRV_SH
 	  To compile this driver as a module, choose M here: the
 	  module will be called rtc-sh.
 
+config RTC_DRV_RZA2M
+	tristate "RZ/A2M On-Chip RTC"
+	depends on ARCH_RENESAS
+	help
+	  Say Y here to enable support for the on-chip RTC found in
+	  RZ/A2M SoCs.
+
 config RTC_DRV_VR41XX
 	tristate "NEC VR41XX"
 	depends on CPU_VR41XX || COMPILE_TEST
