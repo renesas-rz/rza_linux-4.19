@@ -20,6 +20,7 @@
 #include <linux/mtd/physmap.h>
 #include <linux/mtd/concat.h>
 #include <linux/io.h>
+#include <linux/pm_runtime.h>
 
 #define MAX_RESOURCES		4
 
@@ -39,7 +40,7 @@ static int physmap_flash_remove(struct platform_device *dev)
 
 	info = platform_get_drvdata(dev);
 	if (info == NULL)
-		return 0;
+		goto out;
 
 	physmap_data = dev_get_platdata(&dev->dev);
 
@@ -57,6 +58,9 @@ static int physmap_flash_remove(struct platform_device *dev)
 	if (physmap_data->exit)
 		physmap_data->exit(dev);
 
+out:
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
 	return 0;
 }
 
@@ -120,6 +124,9 @@ static int physmap_flash_probe(struct platform_device *dev)
 	}
 
 	platform_set_drvdata(dev, info);
+
+	pm_runtime_enable(&dev->dev);
+	pm_runtime_get_sync(&dev->dev);
 
 	for (i = 0; i < dev->num_resources; i++) {
 		printk(KERN_NOTICE "physmap platform flash device: %.8llx at %.8llx\n",
@@ -192,6 +199,8 @@ static int physmap_flash_probe(struct platform_device *dev)
 	return 0;
 
 err_out:
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
 	physmap_flash_remove(dev);
 	return err;
 }
