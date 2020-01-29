@@ -129,12 +129,18 @@
 
 #if 1 /* Read Only File system in QSPI Example */
 	/* File System in XIP QSPI */
-	/* Remember, we'll be in QSPI XIP mode at this point */
+	/* XIP QSPI was already configued by u-boot */
 	/* Requires CONFIG_MTD_ROM=y */
 	qspi@20000000 {
 		compatible = "mtd-rom";
-		//probe-type = "map_rom";
-		probe-type = "direct-mapped";	// XIP from QSPI
+		probe-type = "map_rom";
+
+		/* You must specify the QSPI clock so that the kernel
+		 * will not turn it off at the end of boot because it
+		 * thinks no one is using it. */
+		clocks = <&cpg CPG_MOD 83>;
+		power-domains = <&cpg>;
+
 		reg = <0x20000000 0x4000000>;	/* 64 MB*/
 		bank-width = <4>;
 		device-width = <1>;
