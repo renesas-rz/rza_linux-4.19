@@ -27,6 +27,7 @@
 #include <linux/slab.h>
 #include "physmap_of_gemini.h"
 #include "physmap_of_versatile.h"
+#include <linux/pm_runtime.h>
 
 struct of_flash_list {
 	struct mtd_info *mtd;
@@ -47,7 +48,7 @@ static int of_flash_remove(struct platform_device *dev)
 
 	info = dev_get_drvdata(&dev->dev);
 	if (!info)
-		return 0;
+		goto out;
 	dev_set_drvdata(&dev->dev, NULL);
 
 	if (info->cmtd) {
@@ -68,6 +69,10 @@ static int of_flash_remove(struct platform_device *dev)
 			kfree(info->list[i].res);
 		}
 	}
+
+out:
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
 	return 0;
 }
 
@@ -196,6 +201,9 @@ static int of_flash_probe(struct platform_device *dev)
 		goto err_flash_remove;
 
 	dev_set_drvdata(&dev->dev, info);
+
+	pm_runtime_enable(&dev->dev);
+	pm_runtime_get_sync(&dev->dev);
 
 	mtd_list = kcalloc(count, sizeof(*mtd_list), GFP_KERNEL);
 	if (!mtd_list)
@@ -333,6 +341,8 @@ err_out:
 	kfree(mtd_list);
 err_flash_remove:
 	of_flash_remove(dev);
+	pm_runtime_put(&dev->dev);
+	pm_runtime_disable(&dev->dev);
 
 	return err;
 }
