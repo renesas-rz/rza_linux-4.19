@@ -84,6 +84,12 @@
 		bank-width = <4>;
 		device-width = <1>;
 
+		/* You must specify the QSPI clock so that the kernel
+		 * will not turn it off at the end of boot because it
+		 * thinks no one is using it. */
+		clocks = <&mstp9_clks R7S72100_CLK_SPIBSC0>;
+		power-domains = <&cpg_clocks>;
+
 		#address-cells = <1>;
 		#size-cells = <1>;
 
