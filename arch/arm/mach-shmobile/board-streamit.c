@@ -53,24 +53,8 @@ static int heartbeat(void * data)
 static int __init streamit_init_late(void)
 {
 	struct device_node *root = of_find_node_by_path("/");
-	struct clk *clk;
 
 	//printk("=== %s ===\n",__func__);
-
-	/* Keep XIP QSPI Alive
-	 * (DO NOT REMOVE)
-	 * At the end of kernel boot, the function clk_disable_unused will
-	 * get called which will disable peripheral clocks that are not
-	 * being used. However, since we set up XIP QSPI in u-boot, the
-	 * kernel does not know that we should not power down the QSPI
-	 * interface. Therefore, we will re-enable the clock here which will
-	 * inform the kernel that at least someone is using it.
-	 */
-	clk = clk_get_sys(NULL,"spibsc0");
-	if (IS_ERR(clk))
-		pr_err("%s: Error: Could not find QSPI clock\n", __func__);
-	else
-		clk_prepare_enable(clk);
 
 	/* Add "no-heartbeat" to the device tree to disable heartbeat */
 	if (!of_property_read_bool(root, "no-heartbeat")) {

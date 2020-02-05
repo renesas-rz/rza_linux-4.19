@@ -169,30 +169,12 @@ static int heartbeat(void * data)
 static int __init rskrza1_init_late(void)
 {
 	struct device_node *root = of_find_node_by_path("/");
-	struct clk *clk;
 
 	/* Only execute this function on the RSK boards */
 	if (!of_machine_is_compatible("renesas,rskrza1"))
 		return 0;
 
 	//printk("=== %s ===\n",__func__);
-
-	/* Keep XIP QSPI Alive
-	 * At the end of kernel boot, the function clk_disable_unused will
-	 * get called which will disable peripheral clocks that are not
-	 * being used. However, since we set up XIP QSPI in u-boot, the
-	 * kernel does not know that we should not power down the QSPI
-	 * interface. Therefore, we will re-enable the clock here which will
-	 * inform the kernel that at least someone is using it.
-	 *
-	 * Another way would have been to add "clk_ignore_unused" to the
-	 * kernel command line and no clocks would get disabled.
-	 */
-	clk = clk_get_sys(NULL,"spibsc0");
-	if (IS_ERR(clk))
-		pr_err("%s: Error: Could not find QSPI clock\n", __func__);
-	else
-		clk_prepare_enable(clk);
 
 	/* Add "no-heartbeat" to the device tree to disable heartbeat */
 	if (!of_property_read_bool(root, "no-heartbeat")) {
