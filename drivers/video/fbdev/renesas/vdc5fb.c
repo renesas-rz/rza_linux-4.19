@@ -2361,7 +2361,7 @@ error:
 	//fb_dealloc_cmap(&info->cmap);
 	//if (priv->fb_nofree)
 	//		iounmap(priv->base);
-	//dma_free_writecombine(&pdev->dev, info->fix.smem_len,
+	//dma_free_wc(&pdev->dev, info->fix.smem_len,
 	//		info->screen_base, info->fix.smem_start);
 	//fb_destroy_modelist(&info->modelist);
 	//framebuffer_release(info);
@@ -2386,13 +2386,8 @@ static int vdc5fb_remove(struct platform_device *pdev)
 	if (priv->fb_nofree)
 		iounmap(priv->base);
 	else
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
 		dma_free_wc(&pdev->dev, info->fix.smem_len,
 			info->screen_base, info->fix.smem_start);
-#else
-		dma_free_writecombine(&pdev->dev, info->fix.smem_len,
-			info->screen_base, info->fix.smem_start);
-#endif
 
 	fb_destroy_modelist(&info->modelist);
 	framebuffer_release(info);
