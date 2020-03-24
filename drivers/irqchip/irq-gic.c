@@ -299,50 +299,6 @@ static int gic_set_type(struct irq_data *d, unsigned int type)
 	if (gicirq < 16)
 		return -EINVAL;
 
-#if defined(CONFIG_ARCH_R7S72100) || defined(CONFIG_ARCH_R7S9210)
-	/* RZ/A1 */
-	/* The RZ/A1 uses the standard ARM GIC interrupt hardware for all its
-	 * interrupts. While that is fine for internal interrupt signals,
-	 * it does not allow us to set up external pin interrupts correctly.
-	 * Therefore for IRQ0 - IRQ7, we will manually configure the trigger
-	 * setting and just configure the GIC as a LEVEL interrupt. */
-#if defined(CONFIG_ARCH_R7S72100)
-	if ( (gicirq >= 32) && (gicirq <= 39) ) {
-#else
-	if ( (gicirq >= 36) && (gicirq <= 43) ) {
-#endif
-		/* Manually set trigger in Interrupt Control Register 1 */
-		enum { LOW_LEVEL=0, FALLING_EDGE, RISING_EDGE, BOTH_EDGE };
-		void __iomem *irc1 = ioremap_nocache(0xfcfef802, 0x2);
-		u16 val;
-		val = readw(irc1);
-		val &= ~(0x3 << ((gicirq - 32) * 2));	// clear bits
-		switch (type) {
-			case IRQ_TYPE_EDGE_RISING:
-				val |= RISING_EDGE << ((gicirq - 32) * 2);
-				break;
-			case IRQ_TYPE_EDGE_FALLING:
-				val |= FALLING_EDGE << ((gicirq - 32) * 2);
-				break;
-			case IRQ_TYPE_EDGE_BOTH:
-				val |= BOTH_EDGE << ((gicirq - 32) * 2);
-				break;
-			case IRQ_TYPE_LEVEL_LOW:
-				val |= LOW_LEVEL << ((gicirq - 32) * 2);
-				break;
-			case IRQ_TYPE_LEVEL_HIGH:
-				printk("Warning: RZ/A1 does not support IRQ_TYPE_LEVEL_HIGH for IRQ0-IRQ7\n");
-				val |= RISING_EDGE << ((gicirq - 32) * 2);
-				break;
-		}
-		writew(val, irc1);
-		iounmap(irc1);
-
-		/* The interrupt signal between the pin controller and GIC is level high */
-		type = IRQ_TYPE_LEVEL_HIGH;
-	}
-#endif
-
 	/* SPIs have restrictions on the supported types */
 	if (gicirq >= 32 && type != IRQ_TYPE_LEVEL_HIGH &&
 			    type != IRQ_TYPE_EDGE_RISING)
