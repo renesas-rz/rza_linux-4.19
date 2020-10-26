@@ -87,7 +87,7 @@
 		};
 	};
 
-#if 0
+#if 1
 	/* File System in XIP QSPI */
 	/* Remember, we'll be in QSPI XIP mode at this point */
 	/* Requires CONFIG_MTD_ROM=y */
